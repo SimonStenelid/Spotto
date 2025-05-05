@@ -1,0 +1,212 @@
+/* Marker styling */
+.marker {
+  cursor: pointer;
+  transform-origin: bottom;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  will-change: transform;
+}
+
+.marker:hover {
+  transform: scale(1.2) translateY(-5px);
+  z-index: 2;
+}
+
+.marker-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+}
+
+/* Base marker icon style */
+.marker-icon {
+  background-color: white;
+  padding: 6px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  transform-origin: bottom;
+  animation: bounce 2s infinite;
+  cursor: pointer;
+  user-select: none;
+  will-change: transform;
+}
+
+/* Category-specific colors */
+[data-category="cafe"] .marker-icon {
+  color: #9333ea; /* Purple */
+}
+
+[data-category="restaurant"] .marker-icon {
+  color: #e11d48; /* Rose */
+}
+
+[data-category="bar"] .marker-icon {
+  color: #0891b2; /* Cyan */
+}
+
+[data-category="cultural"] .marker-icon {
+  color: #ca8a04; /* Yellow */
+}
+
+[data-category="activity"] .marker-icon {
+  color: #16a34a; /* Green */
+}
+
+[data-category="shopping"] .marker-icon {
+  color: #f97316; /* Orange */
+}
+
+/* Hover effects */
+.marker:hover .marker-icon {
+  transform: scale(1.1);
+}
+
+[data-category="cafe"]:hover .marker-icon {
+  color: #7e22ce;
+}
+
+[data-category="restaurant"]:hover .marker-icon {
+  color: #be123c;
+}
+
+[data-category="bar"]:hover .marker-icon {
+  color: #0e7490;
+}
+
+[data-category="cultural"]:hover .marker-icon {
+  color: #a16207;
+}
+
+[data-category="activity"]:hover .marker-icon {
+  color: #15803d;
+}
+
+[data-category="shopping"]:hover .marker-icon {
+  color: #ea580c;
+}
+
+.marker-name {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #4B5563;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.marker:hover .marker-name {
+  opacity: 1;
+}
+
+.marker-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.2);
+  animation: pulse 2s infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+/* Popup styling */
+.mapboxgl-popup.place-popup {
+  max-width: none !important;
+  z-index: 1000 !important;
+}
+
+.mapboxgl-popup.place-popup .mapboxgl-popup-content {
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: popup-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transform-origin: bottom center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mapboxgl-popup.place-popup .mapboxgl-popup-close-button {
+  padding: 6px 8px;
+  color: #666;
+  font-size: 18px;
+  font-weight: 500;
+  right: 4px;
+  top: 4px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mapboxgl-popup.place-popup .mapboxgl-popup-close-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.mapboxgl-popup.place-popup .mapboxgl-popup-tip {
+  border-top-color: white;
+  border-bottom-color: white;
+  z-index: 1000;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes popup-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Prevent unwanted map movements */
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+  margin-top: -1px;
+}
+
+.mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
+  margin-bottom: -1px;
+}
+
+/* Disable map interactions when popup is expanded */
+.map-popup-expanded .mapboxgl-map {
+  pointer-events: none;
+}
+
+.map-popup-expanded .mapboxgl-popup,
+.map-popup-expanded .mapboxgl-popup-content,
+.map-popup-expanded .mapboxgl-popup-close-button {
+  pointer-events: auto;
+} 
