@@ -13,7 +13,28 @@ interface AuthStore {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<{ username: string, avatar: string }>) => Promise<void>;
+  updateProfile: (updates: Partial<User>) => Promise<void>;
+  updateUser: (user: User) => void;
+  updateUserBookmarks: (bookmarks: string[]) => void;
+}
+
+function mapProfileToUser(profile: any, email: string): User {
+  return {
+    id: profile.id,
+    email: email,
+    username: profile.username,
+    firstName: profile.first_name,
+    lastName: profile.last_name,
+    avatar: profile.avatar,
+    phone: profile.phone,
+    city: profile.city,
+    postalCode: profile.postal_code,
+    country: profile.country,
+    bookmarks: profile.bookmarks || [],
+    visitedPlaces: profile.visited_places || [],
+    createdAt: profile.created_at,
+    updatedAt: profile.updated_at
+  };
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -43,18 +64,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         .eq('id', currentUser.id)
         .single();
       
-      set({
-        authState: 'SIGNED_IN',
-        user: {
-          id: currentUser.id,
-          email: currentUser.email!,
-          username: profile?.username || currentUser.email!.split('@')[0],
-          avatar: profile?.avatar,
-          bookmarks: profile?.bookmarks || [],
-          visitedPlaces: profile?.visited_places || [],
-        },
-        profile,
-      });
+      if (profile) {
+        set({
+          authState: 'SIGNED_IN',
+          user: mapProfileToUser(profile, currentUser.email!),
+          profile,
+        });
+      }
     } catch (error) {
       set({ error: (error as Error).message });
     } finally {
@@ -80,18 +96,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         .eq('id', data.user.id)
         .single();
       
-      set({
-        authState: 'SIGNED_IN',
-        user: {
-          id: data.user.id,
-          email: data.user.email!,
-          username: profile?.username || data.user.email!.split('@')[0],
-          avatar: profile?.avatar,
-          bookmarks: profile?.bookmarks || [],
-          visitedPlaces: profile?.visited_places || [],
-        },
-        profile,
-      });
+      if (profile) {
+        set({
+          authState: 'SIGNED_IN',
+          user: mapProfileToUser(profile, data.user.email!),
+          profile,
+        });
+      }
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;
@@ -118,23 +129,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         .eq('id', data.user.id)
         .single();
       
-      set({
-        authState: 'SIGNED_IN',
-        user: {
-          id: data.user.id,
-          email: data.user.email!,
-          username: email.split('@')[0],
-          avatar: profile?.avatar,
-          bookmarks: profile?.bookmarks || [],
-          visitedPlaces: profile?.visited_places || [],
-        },
-        profile: profile || {
-          id: data.user.id,
-          username: email.split('@')[0],
-          bookmarks: [],
-          visited_places: [],
-        },
-      });
+      if (profile) {
+        set({
+          authState: 'SIGNED_IN',
+          user: mapProfileToUser(profile, data.user.email!),
+          profile,
+        });
+      }
     } catch (error) {
       // If the error is about duplicate profile, we can ignore it as the profile was created by the trigger
       if (error instanceof Error && !error.message.includes('duplicate key value')) {
@@ -172,31 +173,52 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      const { error } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
+        .update({
+          username: updates.username,
+          avatar: updates.avatar,
+          first_name: updates.firstName,
+          last_name: updates.lastName,
+          phone: updates.phone,
+          city: updates.city,
+          postal_code: updates.postalCode,
+          country: updates.country,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+        .select()
+        .single();
       
       if (error) throw error;
       
-      // Get updated profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      set({
-        user: {
-          ...user,
-          ...updates,
-        },
-        profile,
-      });
+      if (profile) {
+        const updatedUser = mapProfileToUser(profile, user.email!);
+        set({
+          user: updatedUser,
+          profile,
+        });
+      }
     } catch (error) {
       set({ error: (error as Error).message });
     } finally {
       set({ isLoading: false });
     }
   },
+
+  updateUser: (user) => {
+    set({ user });
+  },
+
+  updateUserBookmarks: (bookmarks) => {
+    const { user } = get();
+    if (!user) return;
+
+    set({
+      user: {
+        ...user,
+        bookmarks
+      }
+    });
+  }
 }));
