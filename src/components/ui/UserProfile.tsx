@@ -115,4 +115,4 @@ export function UserProfile({ isCollapsed }: UserProfileProps) {
       </Dialog>
     </div>
   );
-} 
+}
