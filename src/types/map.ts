@@ -1,4 +1,5 @@
-import { Place, Mood, MapSettings } from './index';
+import { Place, MapSettings } from './index';
+import { PlaceCategory } from '@/store/useMapStore';
 
 export interface Location {
   longitude: number;
@@ -11,13 +12,13 @@ export interface MapState {
   filteredPlaces: Place[];
   selectedPlaceId: string | null;
   selectedPlace: Place | null;
-  selectedMoods: Mood[];
+  selectedCategories: PlaceCategory[];
   isLoading: boolean;
   error: string | null;
   selectPlace: (id: string | null) => void;
   setMapSettings: (settings: Partial<MapSettings>) => void;
   setFilteredPlaces: (places: Place[]) => void;
-  toggleMood: (mood: Mood) => void;
-  clearMoods: () => void;
+  toggleCategory: (category: PlaceCategory) => void;
+  clearCategories: () => void;
   fetchPlaces: () => Promise<void>;
-} 
+}

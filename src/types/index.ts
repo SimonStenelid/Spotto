@@ -1,3 +1,5 @@
+import { Database } from './supabase';
+
 export interface Place {
   id: string;
   name: string;
@@ -7,7 +9,7 @@ export interface Place {
     latitude: number;
     longitude: number;
   };
-  category: string;
+  category: Database['public']['Enums']['place_category'];
   types: string[];
   price_level: number | null;
   rating: number | null;
@@ -15,7 +17,6 @@ export interface Place {
     weekday_text: string[];
   };
   images: string[];
-  moods: string[];
   reactions: Record<string, number>;
   reviews: {
     id: string;
@@ -61,13 +62,23 @@ export type Mood =
   | '📸 Instagram Spots'
   | '✨ Hidden Gems';
 
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+
 export interface User {
   id: string;
-  email: string;
+  email: string | null;
   username: string;
-  avatar?: string;
-  bookmarks: string[];
-  visitedPlaces: string[];
+  firstName: string | null;
+  lastName: string | null;
+  avatar: string | null;
+  phone: string | null;
+  city: string | null;
+  postalCode: string | null;
+  country: string | null;
+  bookmarks: string[] | null;
+  visitedPlaces: string[] | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface MapSettings {
@@ -76,3 +87,5 @@ export interface MapSettings {
 }
 
 export type AuthState = 'SIGNED_OUT' | 'SIGNED_IN' | 'LOADING';
+
+export type { Database };
