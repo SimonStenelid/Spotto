@@ -21,4 +21,4 @@ export interface MapState {
   toggleCategory: (category: PlaceCategory) => void;
   clearCategories: () => void;
   fetchPlaces: () => Promise<void>;
-} 
+}
