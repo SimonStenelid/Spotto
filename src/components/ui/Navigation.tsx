@@ -19,7 +19,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 export const NavigationContext = createContext<{
   isCollapsed: boolean;
   setIsCollapsed: (value: boolean) => void;
-}>({
+}>({ 
   isCollapsed: false,
   setIsCollapsed: () => {},
 });
@@ -110,4 +110,4 @@ export function Navigation() {
       </div>
     </NavigationContext.Provider>
   );
-} 
+}
