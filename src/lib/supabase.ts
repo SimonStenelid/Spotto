@@ -87,27 +87,49 @@ export const updateProfile = async (userId: string, updates: Partial<User>) => {
 
 export const updateAvatar = async (userId: string, file: File) => {
   try {
+    // Validate input
+    if (!userId) throw new Error('User ID is required');
+    if (!file) throw new Error('File is required');
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('File size too large. Maximum size is 5MB.');
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Only image files are allowed.');
+    }
+
+    console.log('Starting avatar update for user:', userId);
+
     // Delete existing avatar if any
-    const { data: existingFiles } = await supabase.storage
+    const { data: existingFiles, error: listError } = await supabase.storage
       .from('avatars')
       .list(userId);
 
+    if (listError) {
+      console.error('Error listing existing files:', listError);
+      throw listError;
+    }
+
     if (existingFiles?.length) {
-      await Promise.all(
-        existingFiles.map(file => 
-          supabase.storage
-            .from('avatars')
-            .remove([`${userId}/${file.name}`])
-        )
-      );
+      const { error: deleteError } = await supabase.storage
+        .from('avatars')
+        .remove(existingFiles.map(file => `${userId}/${file.name}`));
+
+      if (deleteError) {
+        console.error('Error deleting existing files:', deleteError);
+        throw deleteError;
+      }
     }
 
     // Upload image
     const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
     const fileName = `avatar.${fileExt}`;
     const filePath = `${userId}/${fileName}`;
-    
-    const { error: uploadError, data: uploadData } = await supabase.storage
+
+    const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(filePath, file, { 
         upsert: true,
@@ -118,39 +140,35 @@ export const updateAvatar = async (userId: string, file: File) => {
       console.error('Upload error:', uploadError);
       throw uploadError;
     }
-    
+
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('avatars')
       .getPublicUrl(filePath);
 
-    // Store metadata in profile_pictures table
-    const { error: metadataError } = await supabase
-      .from('profile_pictures')
-      .upsert({
-        user_id: userId,
-        storage_path: filePath,
-        file_name: file.name,
-        content_type: file.type,
-        size_bytes: file.size,
-      });
-
-    if (metadataError) {
-      console.error('Metadata error:', metadataError);
-      throw metadataError;
+    if (!publicUrl) {
+      throw new Error('Failed to get public URL');
     }
-    
-    // Update profile avatar URL
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ avatar: publicUrl })
-      .eq('id', userId);
-    
+
+    // Update both profile_pictures and profiles tables
+    const { error: updateError } = await supabase.rpc('update_profile_picture', {
+      p_user_id: userId,
+      p_storage_path: filePath,
+      p_file_name: file.name,
+      p_content_type: file.type,
+      p_size_bytes: file.size.toString(),
+      p_avatar_url: publicUrl
+    });
+
     if (updateError) {
-      console.error('Profile update error:', updateError);
+      console.error('Error updating profile:', updateError);
+      // If update fails, clean up the uploaded file
+      await supabase.storage
+        .from('avatars')
+        .remove([filePath]);
       throw updateError;
     }
-    
+
     return { publicUrl };
   } catch (error) {
     console.error('Error updating avatar:', error);

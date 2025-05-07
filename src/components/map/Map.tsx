@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '../../styles/map.css';
@@ -57,14 +57,38 @@ function isValidCoordinate(location: { longitude: number; latitude: number } | n
   );
 }
 
+// Add this helper function before the Map component
+function centerMapOnPlace(map: mapboxgl.Map, place: Place) {
+  if (!place.location || !isValidCoordinate(place.location)) return;
+  
+  // Get the map container dimensions
+  const mapContainer = map.getContainer();
+  const mapHeight = mapContainer.offsetHeight;
+  
+  // Calculate vertical offset to account for popup height and UI elements
+  // Popup height is approximately 200px, and we want it centered in the viewport
+  const popupHeight = 200;
+  const verticalOffset = (popupHeight / 2) / (111320 * Math.cos(place.location.latitude * Math.PI / 180));
+  
+  map.easeTo({
+    center: [
+      place.location.longitude,
+      place.location.latitude + verticalOffset // Add offset to move point down
+    ],
+    duration: 500,
+    zoom: Math.max(map.getZoom() || 13, 14),
+    padding: { top: 0, bottom: 0, left: 0, right: 0 } // Reset any existing padding
+  });
+}
+
 const Map: React.FC<MapProps> = ({ className }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const popupsRef = useRef<{ [key: string]: mapboxgl.Popup }>({});
-  const geolocateControl = useRef<mapboxgl.GeolocateControl | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isPlaceDetailsOpen, setIsPlaceDetailsOpen] = useState(false);
   
   const { 
     mapSettings, 
@@ -74,6 +98,18 @@ const Map: React.FC<MapProps> = ({ className }) => {
   } = useMapStore();
 
   const { isCollapsed } = useNavigation();
+  
+  // Safe resize function
+  const safeResize = useCallback(() => {
+    const map = mapInstance.current;
+    if (map && mapContainer.current) {
+      try {
+        map.resize();
+      } catch (error) {
+        console.warn('Map resize failed:', error);
+      }
+    }
+  }, []);
   
   // Initialize map
   useEffect(() => {
@@ -85,12 +121,16 @@ const Map: React.FC<MapProps> = ({ className }) => {
       style: MAP_STYLE,
       center: mapSettings.center,
       zoom: mapSettings.zoom,
-      pitch: 45, // Add a slight tilt for 3D effect
+      pitch: 45,
       bearing: -17.6,
       antialias: true
     });
     
     mapInstance.current = map;
+    
+    // Expose map instance to window for search field
+    (window as any).mapInstance = map;
+    (window as any).popupsRef = popupsRef;
     
     // Add custom navigation control with 3D rotation
     const nav = new mapboxgl.NavigationControl({
@@ -100,16 +140,13 @@ const Map: React.FC<MapProps> = ({ className }) => {
     });
     map.addControl(nav, 'top-right');
     
-    // Add geolocate control with custom styling
-    const geolocate = new mapboxgl.GeolocateControl({
-      positionOptions: {
-        enableHighAccuracy: true
-      },
-      trackUserLocation: true,
-      showAccuracyCircle: true,
-    });
-    map.addControl(geolocate, 'bottom-right');
-    geolocateControl.current = geolocate;
+    // Set up resize observer
+    if (mapContainer.current) {
+      resizeObserverRef.current = new ResizeObserver(() => {
+        safeResize();
+      });
+      resizeObserverRef.current.observe(mapContainer.current);
+    }
     
     // Add 3D building layer for depth
     map.on('load', () => {
@@ -153,8 +190,8 @@ const Map: React.FC<MapProps> = ({ className }) => {
         labelLayerId
       );
       
-      // Trigger geolocation
-      geolocate.trigger();
+      // Initial resize after load
+      safeResize();
     });
     
     // Add smooth zoom on double click
@@ -170,40 +207,32 @@ const Map: React.FC<MapProps> = ({ className }) => {
     
     // Cleanup
     return () => {
-      map.remove();
-      mapInstance.current = null;
-      geolocateControl.current = null;
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
     };
-  }, [mapSettings.center, mapSettings.zoom]);
+  }, [mapSettings.center, mapSettings.zoom, safeResize]);
   
   // Handle navigation collapse state changes
   useEffect(() => {
-    const map = mapInstance.current;
-    if (!map) return;
+    if (!mapInstance.current || !mapContainer.current) return;
 
-    // Create a ResizeObserver to handle container size changes
-    const resizeObserver = new ResizeObserver(() => {
-      map.resize();
-    });
-
-    // Observe the map container
-    if (mapContainer.current) {
-      resizeObserver.observe(mapContainer.current);
-    }
-
-    // Trigger an immediate resize
-    map.resize();
-
-    // Also trigger a delayed resize to handle CSS transitions
-    const timer = setTimeout(() => {
-      map.resize();
+    // Use a RAF to ensure the DOM has updated
+    const timeoutId = setTimeout(() => {
+      requestAnimationFrame(() => {
+        safeResize();
+      });
     }, 350); // Slightly longer than the CSS transition
 
     return () => {
-      resizeObserver.disconnect();
-      clearTimeout(timer);
+      clearTimeout(timeoutId);
     };
-  }, [isCollapsed]);
+  }, [isCollapsed, safeResize]);
   
   // Update markers when filteredPlaces change
   useEffect(() => {
@@ -264,9 +293,11 @@ const Map: React.FC<MapProps> = ({ className }) => {
       const root = createRoot(popupContainer);
       
       const handleViewDetails = () => {
+        // Close all popups first
+        Object.values(popupsRef.current).forEach(popup => popup.remove());
+        
         setSelectedPlace(place);
-        setIsDetailsOpen(true);
-        popup.remove();
+        setIsPlaceDetailsOpen(true);
       };
 
       root.render(
@@ -282,210 +313,66 @@ const Map: React.FC<MapProps> = ({ className }) => {
       const marker = new mapboxgl.Marker({
         element: el,
         anchor: 'bottom',
-        offset: [0, 0]
+        offset: [0, 0],
+        rotationAlignment: 'viewport',
+        pitchAlignment: 'viewport'
       })
         .setLngLat([place.location!.longitude, place.location!.latitude])
-        .setPopup(popup)
         .addTo(map);
-      
-      // Add click handler to both marker element and icon
-      const handleClick = (e: Event) => {
-        e.stopPropagation(); // Prevent event bubbling
-        
-        // Close any open popups except this one
-        Object.entries(popupsRef.current).forEach(([id, p]) => {
-          if (id !== place.id) {
-            p.remove();
-          }
-        });
-        
-        // Show this popup
-        popup.addTo(map);
-        
-        // Pan map to center the marker and popup with offset
-        const bounds = map.getBounds();
-        const offset = (bounds.getNorth() - bounds.getSouth()) / 6;
-        
-        map.easeTo({
-          center: [
-            place.location!.longitude,
-            place.location!.latitude - offset
-          ],
-          duration: 500,
-          zoom: Math.max(map.getZoom() || 13, 14)
-        });
-      };
-      
-      el.addEventListener('click', handleClick);
-      
+
       // Store references
       markersRef.current[place.id] = marker;
       popupsRef.current[place.id] = popup;
+      
+      // Add click handler to marker
+      el.addEventListener('click', (e: Event) => {
+        e.stopPropagation();
+        
+        // Close any open popups
+        Object.values(popupsRef.current).forEach(p => p.remove());
+        
+        // Show this popup
+        popup
+          .setLngLat([place.location!.longitude, place.location!.latitude])
+          .addTo(map);
+        
+        // Center the map on the place
+        centerMapOnPlace(map, place);
+      });
     });
   }, [filteredPlaces]);
   
+  // Handle selected place changes
+  useEffect(() => {
+    if (selectedPlaceId) {
+      const place = filteredPlaces.find(p => p.id === selectedPlaceId);
+      if (place && mapInstance.current) {
+        setSelectedPlace(place);
+        setIsPlaceDetailsOpen(true);
+        centerMapOnPlace(mapInstance.current, place);
+      }
+    } else {
+      setSelectedPlace(null);
+      setIsPlaceDetailsOpen(false);
+    }
+  }, [selectedPlaceId, filteredPlaces]);
+  
   return (
-    <>
-      <style>
-        {`
-          .mapboxgl-map {
-            width: 100% !important;
-            height: 100% !important;
-            transition: all 300ms ease-in-out;
-          }
-          
-          .mapboxgl-ctrl-logo {
-            display: none !important;
-          }
-          
-          .marker {
-            cursor: pointer;
-            transform-origin: bottom;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 1;
-          }
-          
-          .marker:hover {
-            transform: scale(1.2) translateY(-5px);
-            z-index: 2;
-          }
-          
-          .marker-content {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            pointer-events: auto;
-          }
-          
-          .marker-icon {
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-            transform-origin: bottom;
-            animation: bounce 2s infinite;
-            cursor: pointer;
-            user-select: none;
-          }
-          
-          .marker-name {
-            position: absolute;
-            bottom: -25px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255,255,255,0.9);
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: #4B5563;
-            white-space: nowrap;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            pointer-events: none;
-          }
-          
-          .marker:hover .marker-name {
-            opacity: 1;
-          }
-          
-          .marker-pulse {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: rgba(139, 92, 246, 0.3);
-            animation: pulse 2s infinite;
-            pointer-events: none;
-          }
-          
-          .mapboxgl-popup {
-            z-index: 3;
-          }
-          
-          .mapboxgl-popup-content {
-            padding: 0;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          }
-          
-          .mapboxgl-popup-close-button {
-            padding: 6px 8px;
-            color: #6B7280;
-            font-size: 18px;
-            font-weight: 500;
-            right: 4px;
-            top: 4px;
-            border-radius: 50%;
-            transition: all 0.2s ease;
-            z-index: 1;
-          }
-          
-          .mapboxgl-popup-close-button:hover {
-            background-color: rgba(0,0,0,0.05);
-            color: #374151;
-          }
-          
-          @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-          }
-          
-          @keyframes pulse {
-            0% {
-              transform: translate(-50%, -50%) scale(0.95);
-              opacity: 1;
-            }
-            100% {
-              transform: translate(-50%, -50%) scale(2);
-              opacity: 0;
-            }
-          }
-          
-          /* Custom control styling */
-          .mapboxgl-ctrl-group {
-            background: rgba(255,255,255,0.9) !important;
-            backdrop-filter: blur(8px);
-            border: none !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-            border-radius: 12px !important;
-            overflow: hidden;
-          }
-          
-          .mapboxgl-ctrl-group button {
-            width: 36px !important;
-            height: 36px !important;
-            border-radius: 0 !important;
-          }
-          
-          .mapboxgl-ctrl-group button:hover {
-            background: rgba(139, 92, 246, 0.1) !important;
-          }
-        `}
-      </style>
-      <div 
-        ref={mapContainer} 
-        className={cn(
-          "w-full h-full relative",
-          "transition-all duration-300 ease-in-out",
-          className
-        )}
-      />
-      
+    <div className={cn("relative w-full h-full", className)}>
+      <div ref={mapContainer} className="w-full h-full" />
+
+      {/* Place Details Sheet */}
       {selectedPlace && (
         <PlaceDetailsSheet
           place={selectedPlace}
-          isOpen={isDetailsOpen}
+          isOpen={isPlaceDetailsOpen}
           onClose={() => {
-            setIsDetailsOpen(false);
-            setSelectedPlace(null);
+            setIsPlaceDetailsOpen(false);
+            selectPlace(null);
           }}
         />
       )}
-    </>
+    </div>
   );
 };
 

@@ -4,7 +4,7 @@ import { ArrowLeft, Map } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { getBookmarkedPlaces } from '../lib/supabase';
 import { Place } from '../types';
-import PlaceCard from '../components/place/PlaceCard';
+import { PlaceListItem } from '../components/place/PlaceListItem';
 
 const BookmarksPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -64,7 +64,7 @@ const BookmarksPage: React.FC = () => {
         ) : bookmarkedPlaces.length > 0 ? (
           <div className="grid grid-cols-1 gap-4">
             {bookmarkedPlaces.map((place) => (
-              <PlaceCard key={place.id} place={place} />
+              <PlaceListItem key={place.id} place={place} />
             ))}
           </div>
         ) : (

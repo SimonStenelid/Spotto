@@ -4,7 +4,7 @@ import { useAuthStore } from './store/useAuthStore';
 import { Navigation } from './components/ui/Navigation';
 import { HomeIcon, BookmarkIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/toaster';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -108,8 +108,7 @@ function AppContent() {
         </nav>
       )}
 
-      {/* Toast Provider */}
-      <Toaster position="top-center" expand={true} richColors />
+      <Toaster />
     </div>
   );
 }

@@ -1,11 +1,38 @@
 import { create } from 'zustand';
-import { MapState, MapSettings, Place, Mood } from '../types/map';
+import type { Place, MapSettings } from '../types';
 import { getPlaces, getPlaceById } from '../lib/supabase';
 
 const DEFAULT_CENTER: [number, number] = [18.0773, 59.3168]; // Average location of all places
 const DEFAULT_ZOOM = 13;
 
-export const useMapStore = create<MapState>((set, get) => ({
+// Define available place categories
+export const PLACE_CATEGORIES = ['cafe', 'restaurant', 'bar', 'cultural', 'activity', 'shopping'] as const;
+export type PlaceCategory = typeof PLACE_CATEGORIES[number];
+
+interface State {
+  mapSettings: MapSettings;
+  places: Place[];
+  filteredPlaces: Place[];
+  selectedPlaceId: string | null;
+  selectedPlace: Place | null;
+  selectedCategories: PlaceCategory[];
+  isLoading: boolean;
+  error: string | null;
+}
+
+interface Actions {
+  selectPlace: (id: string | null) => Promise<void>;
+  setMapSettings: (settings: Partial<MapSettings>) => void;
+  setFilteredPlaces: (places: Place[]) => void;
+  toggleCategory: (category: PlaceCategory) => void;
+  clearCategories: () => void;
+  fetchPlaces: () => Promise<void>;
+  flyToPlace: (place: Place) => void;
+}
+
+type Store = State & Actions;
+
+export const useMapStore = create<Store>((set, get) => ({
   mapSettings: {
     center: DEFAULT_CENTER,
     zoom: DEFAULT_ZOOM,
@@ -14,11 +41,11 @@ export const useMapStore = create<MapState>((set, get) => ({
   filteredPlaces: [],
   selectedPlaceId: null,
   selectedPlace: null,
-  selectedMoods: [],
+  selectedCategories: [],
   isLoading: false,
   error: null,
   
-  selectPlace: async (id) => {
+  selectPlace: async (id: string | null) => {
     if (!id) {
       set({ selectedPlaceId: null, selectedPlace: null });
       return;
@@ -32,16 +59,10 @@ export const useMapStore = create<MapState>((set, get) => ({
         selectedPlaceId: id,
         selectedPlace: place,
       });
-      
-      // Update map view to focus on selected place
-      if (place) {
-        set((state) => ({
-          mapSettings: {
-            ...state.mapSettings,
-            center: [place.location.longitude, place.location.latitude],
-            zoom: 15,
-          },
-        }));
+
+      // Fly to the place if it has a location
+      if (place?.location) {
+        get().flyToPlace(place);
       }
     } catch (error) {
       console.error('Error fetching place:', error);
@@ -49,42 +70,56 @@ export const useMapStore = create<MapState>((set, get) => ({
     }
   },
   
-  setMapSettings: (settings) => set((state) => ({
+  flyToPlace: (place: Place) => {
+    if (!place.location) return;
+    
+    const map = (window as any).mapInstance;
+    if (!map) return;
+
+    map.flyTo({
+      center: [place.location.longitude, place.location.latitude],
+      zoom: 16,
+      duration: 1500,
+      essential: true
+    });
+  },
+  
+  setMapSettings: (settings: Partial<MapSettings>) => set((state: State) => ({
     mapSettings: {
       ...state.mapSettings,
       ...settings,
     },
   })),
   
-  setFilteredPlaces: (places) => set({ 
+  setFilteredPlaces: (places: Place[]) => set({ 
     places,
     filteredPlaces: places 
   }),
   
-  toggleMood: (mood: Mood) => {
-    set((state) => {
-      const isSelected = state.selectedMoods.includes(mood);
-      const newSelectedMoods = isSelected
-        ? state.selectedMoods.filter(m => m !== mood)
-        : [...state.selectedMoods, mood];
+  toggleCategory: (category: PlaceCategory) => {
+    set((state: State) => {
+      const isSelected = state.selectedCategories.includes(category);
+      const newSelectedCategories = isSelected
+        ? state.selectedCategories.filter((c) => c !== category)
+        : [...state.selectedCategories, category];
       
-      // Filter places based on selected moods
-      const newFilteredPlaces = newSelectedMoods.length === 0
+      // Filter places based on selected categories
+      const newFilteredPlaces = newSelectedCategories.length === 0
         ? state.places
-        : state.places.filter(place => 
-            place.moods?.some(m => newSelectedMoods.includes(m)) ?? false
+        : state.places.filter((place: Place) => 
+            newSelectedCategories.includes(place.category as PlaceCategory)
           );
       
       return {
-        selectedMoods: newSelectedMoods,
+        selectedCategories: newSelectedCategories,
         filteredPlaces: newFilteredPlaces,
       };
     });
   },
   
-  clearMoods: () => {
-    set((state) => ({
-      selectedMoods: [],
+  clearCategories: () => {
+    set((state: State) => ({
+      selectedCategories: [],
       filteredPlaces: state.places,
     }));
   },
@@ -102,10 +137,10 @@ export const useMapStore = create<MapState>((set, get) => ({
         isLoading: false 
       });
       
-      // Apply any existing mood filters
-      const { selectedMoods } = get();
-      if (selectedMoods.length > 0) {
-        get().toggleMood(selectedMoods[0]); // Re-filter
+      // Apply any existing category filters
+      const { selectedCategories } = get();
+      if (selectedCategories.length > 0) {
+        get().toggleCategory(selectedCategories[0]); // Re-filter
       }
     } catch (error) {
       console.error('Error fetching places:', error);

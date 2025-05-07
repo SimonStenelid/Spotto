@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, X } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import Map from '../components/map/Map';
-import MoodFilter from '../components/ui/MoodFilter';
-import PlaceCard from '../components/place/PlaceCard';
 import { useMapStore } from '../store/useMapStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { cn } from '@/lib/utils';
-import { SearchField } from '@/components/ui/searchfield';
+import { SearchField } from '../components/ui/SearchField';
 
 const HomePage: React.FC = () => {
   const { 
@@ -18,24 +16,10 @@ const HomePage: React.FC = () => {
   } = useMapStore();
   
   const { user, authState } = useAuthStore();
-  const [isPlaceCardOpen, setIsPlaceCardOpen] = useState(false);
   
   useEffect(() => {
     fetchPlaces();
   }, [fetchPlaces]);
-  
-  useEffect(() => {
-    if (selectedPlace) {
-      setIsPlaceCardOpen(true);
-    } else {
-      setIsPlaceCardOpen(false);
-    }
-  }, [selectedPlace]);
-  
-  const handleClosePlaceCard = () => {
-    selectPlace(null);
-    setIsPlaceCardOpen(false);
-  };
   
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-100">
@@ -77,37 +61,6 @@ const HomePage: React.FC = () => {
           )}
         </div>
       </div>
-      
-      {/* Filter bar */}
-      <div className="absolute top-20 left-0 right-0 px-4 z-10">
-        <MoodFilter />
-      </div>
-      
-      {/* Bottom sheet for place info */}
-      <AnimatePresence>
-        {isPlaceCardOpen && selectedPlace && (
-          <motion.div
-            className="absolute bottom-0 inset-x-0 z-20 p-4 pb-safe-area-bottom"
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 25 }}
-          >
-            <div className="relative">
-              {/* Close button */}
-              <button
-                onClick={handleClosePlaceCard}
-                className="absolute -top-12 right-2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center z-30"
-              >
-                <X size={20} className="text-gray-600" />
-              </button>
-              
-              {/* Place card */}
-              <PlaceCard place={selectedPlace} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       
       {/* "No places found" message */}
       {!isLoading && !selectedPlace && (

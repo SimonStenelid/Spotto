@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ import {
 import type { Place } from '@/types';
 import { useAuthStore } from '@/store/useAuthStore';
 import { cn } from '@/lib/utils';
+import { addBookmark, removeBookmark } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 interface PlaceDetailsSheetProps {
   place: Place;
@@ -31,9 +33,48 @@ interface PlaceDetailsSheetProps {
 }
 
 export function PlaceDetailsSheet({ place, isOpen, onClose }: PlaceDetailsSheetProps) {
-  const { user } = useAuthStore();
+  const { user, updateUserBookmarks } = useAuthStore();
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const [isBookmarked, setIsBookmarked] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  // Check if place is bookmarked on mount and when user changes
+  useEffect(() => {
+    if (user && place) {
+      setIsBookmarked(user.bookmarks.includes(place.id));
+    }
+  }, [user, place]);
+
+  const handleBookmarkToggle = async () => {
+    if (!user) {
+      toast.error('Please log in to bookmark places');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (isBookmarked) {
+        const { error } = await removeBookmark(user.id, place.id);
+        if (error) throw error;
+        const newBookmarks = user.bookmarks.filter(id => id !== place.id);
+        updateUserBookmarks(newBookmarks);
+        setIsBookmarked(false);
+        toast.success('Removed from bookmarks');
+      } else {
+        const { error } = await addBookmark(user.id, place.id);
+        if (error) throw error;
+        const newBookmarks = [...user.bookmarks, place.id];
+        updateUserBookmarks(newBookmarks);
+        setIsBookmarked(true);
+        toast.success('Added to bookmarks');
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+      toast.error('Failed to update bookmark');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Calculate stats
   const likesCount = place.reactions 
@@ -130,9 +171,16 @@ export function PlaceDetailsSheet({ place, isOpen, onClose }: PlaceDetailsSheetP
               <Button 
                 size="icon" 
                 variant="outline"
-                onClick={() => setIsBookmarked(!isBookmarked)}
+                onClick={handleBookmarkToggle}
+                disabled={isLoading}
               >
-                <Bookmark className={cn("h-4 w-4", isBookmarked && "fill-current")} />
+                <Bookmark 
+                  className={cn(
+                    "h-4 w-4",
+                    isBookmarked && "fill-current",
+                    isLoading && "animate-pulse"
+                  )} 
+                />
               </Button>
             </div>
           </div>
@@ -274,8 +322,22 @@ export function PlaceDetailsSheet({ place, isOpen, onClose }: PlaceDetailsSheetP
 
         {/* Bottom action bar */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t">
-          <Button className="w-full" size="lg">
-            {isBookmarked ? 'Saved to your collection' : 'Save this place'}
+          <Button 
+            className="w-full" 
+            size="lg"
+            onClick={handleBookmarkToggle}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Updating...
+              </span>
+            ) : isBookmarked ? (
+              'Remove from bookmarks'
+            ) : (
+              'Save this place'
+            )}
           </Button>
         </div>
       </SheetContent>

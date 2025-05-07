@@ -12,5 +12,18 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src')
     }
-  }
+  },
+  server: {
+    port: 5173,
+    strictPort: true,
+    watch: {
+      usePolling: true,
+    },
+  },
+  build: {
+    sourcemap: true,
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
+  },
 });

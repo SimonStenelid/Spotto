@@ -89,57 +89,71 @@ export async function searchPlaces(query: string) {
   try {
     console.log('Starting search with query:', query);
     
-    // Clean and prepare the search query
     const searchQuery = query.trim().toLowerCase();
     
-    // Search in stored places across multiple fields
+    if (!searchQuery) {
+      return { results: [], error: null };
+    }
+
+    // First try searching by name and description
+    const orFilters = [
+      `name.ilike.%${searchQuery}%`,
+      `description.ilike.%${searchQuery}%`
+    ];
+    const orQueryString = orFilters.join(',');
+
     const { data: places, error: searchError } = await supabase
       .from('places')
       .select('*')
-      .or(
-        `name.ilike.%${searchQuery}%,` +
-        `description.ilike.%${searchQuery}%,` +
-        `category.ilike.%${searchQuery}%`
-      )
+      .or(orQueryString)
       .limit(10);
 
     console.log('Places search results:', places);
     console.log('Places search error:', searchError);
 
-    if (searchError) throw searchError;
-
-    // If no direct matches, try searching by type
-    if (!places?.length) {
-      const commonTypes = [
-        'restaurant', 'cafe', 'bar', 'museum', 'park', 'store', 'shopping',
-        'food', 'nightlife', 'cultural', 'activity'
-      ];
-      
-      // Check if the search query partially matches any common type
-      const matchingTypes = commonTypes.filter(type => 
-        type.includes(searchQuery) || searchQuery.includes(type)
-      );
-
-      if (matchingTypes.length > 0) {
-        // Search for places with matching categories
-        const { data: typeResults, error: typeError } = await supabase
-          .from('places')
-          .select('*')
-          .in('category', matchingTypes)
-          .limit(10);
-
-        console.log('Type search results:', typeResults);
-        console.log('Type search error:', typeError);
-
-        if (typeError) throw typeError;
-        
-        return { results: typeResults || [], error: null };
-      }
+    if (searchError) {
+      console.error('Supabase search error:', searchError);
+      throw searchError;
     }
 
-    return { results: places || [], error: null };
+    // If we found results by name/description, return them
+    if (places?.length > 0) {
+      return { results: places, error: null };
+    }
+
+    // If no results, try matching against common place types
+    const commonTypes = [
+      'restaurant', 'cafe', 'bar', 'museum', 'park', 'store', 'shopping',
+      'food', 'nightlife', 'cultural', 'activity'
+    ];
+    
+    const matchingTypes = commonTypes.filter(type => 
+      type.includes(searchQuery) || searchQuery.includes(type)
+    );
+
+    if (matchingTypes.length > 0) {
+      const { data: typeResults, error: typeError } = await supabase
+        .from('places')
+        .select('*')
+        .in('category', matchingTypes)
+        .limit(10);
+
+      console.log('Type search results:', typeResults);
+      console.log('Type search error:', typeError);
+
+      if (typeError) {
+        console.error('Supabase type search error:', typeError);
+        throw typeError;
+      }
+      
+      return { results: typeResults || [], error: null };
+    }
+
+    // If no results found by any method, return empty array
+    return { results: [], error: null };
   } catch (error) {
-    console.error('Error searching places:', error);
-    return { results: [], error };
+    console.error('Error in searchPlaces function:', error);
+    const processedError = error instanceof Error ? { message: error.message, name: error.name } : error;
+    return { results: [], error: processedError };
   }
 } 

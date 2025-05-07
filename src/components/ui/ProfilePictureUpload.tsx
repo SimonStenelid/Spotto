@@ -2,30 +2,53 @@
 
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { updateAvatar } from '@/lib/supabase';
-import { useAuthStore } from '@/store/useAuthStore';
-import { Button } from './button';
-import { cn } from '@/lib/utils';
+import { updateAvatar } from '../../lib/supabase';
+import { useAuthStore } from '../../store/useAuthStore';
+import { Button } from "./button";
+import { cn } from "../../lib/utils";
 import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from "./use-toast";
+import { supabase } from '../../lib/supabase';
 
 interface ProfilePictureUploadProps {
   onClose?: () => void;
 }
 
 export function ProfilePictureUpload({ onClose }: ProfilePictureUploadProps) {
-  const { user, updateProfile } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const { toast } = useToast();
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
-    if (!file || !user) return;
+    if (!file || !user) {
+      toast({
+        title: "Error",
+        description: "No file selected or user not logged in.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size too large. Maximum size is 5MB.');
+      toast({
+        title: "Error",
+        description: "File size too large. Maximum size is 5MB.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Only image files are allowed.",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -42,28 +65,123 @@ export function ProfilePictureUpload({ onClose }: ProfilePictureUploadProps) {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 100);
 
+      console.log('Starting file upload process...', {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        userId: user.id
+      });
+
       // Use the updateAvatar helper function
       const { error, publicUrl } = await updateAvatar(user.id, file);
 
       clearInterval(progressInterval);
       setUploadProgress(100);
 
-      if (error) throw error;
-      if (!publicUrl) throw new Error('No public URL returned');
+      if (error) {
+        console.error('Error uploading avatar:', error);
+        let errorMessage = 'Failed to update profile picture. ';
+        if (error instanceof Error) {
+          errorMessage += error.message;
+        } else if (typeof error === 'object' && error !== null) {
+          // Handle Supabase error object
+          const supabaseError = error as { message?: string, details?: string };
+          errorMessage += supabaseError.message || supabaseError.details || 'Unknown error occurred.';
+        } else {
+          errorMessage += 'Please try again.';
+        }
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+        return;
+      }
 
-      // Update user profile in store
-      await updateProfile({ avatar: publicUrl });
-      
-      toast.success('Profile picture updated successfully!');
-      if (onClose) onClose();
+      if (!publicUrl) {
+        console.error('No public URL returned');
+        toast({
+          title: "Error",
+          description: "No URL returned from upload. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Successfully got public URL:', publicUrl);
+
+      // Get the updated profile data
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        if (!profile) throw new Error('No profile data returned');
+
+        // Update the user in the store with all profile data
+        const updatedUser = {
+          ...user,
+          avatar: profile.avatar,
+          username: profile.username,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          phone: profile.phone,
+          city: profile.city,
+          postalCode: profile.postal_code,
+          country: profile.country,
+          bookmarks: profile.bookmarks || [],
+          visitedPlaces: profile.visited_places || [],
+          updatedAt: profile.updated_at
+        };
+
+        updateUser(updatedUser);
+        console.log('Profile updated successfully');
+        toast({
+          title: "Success",
+          description: "Profile picture updated successfully!"
+        });
+        if (onClose) onClose();
+      } catch (profileError) {
+        console.error('Error updating profile:', profileError);
+        let errorMessage = 'Failed to update profile. ';
+        if (profileError instanceof Error) {
+          errorMessage += profileError.message;
+        } else if (typeof profileError === 'object' && profileError !== null) {
+          const supabaseError = profileError as { message?: string, details?: string };
+          errorMessage += supabaseError.message || supabaseError.details || 'Unknown error occurred.';
+        } else {
+          errorMessage += 'Please try again.';
+        }
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
     } catch (error) {
-      console.error('Error uploading avatar:', error);
-      toast.error('Failed to update profile picture. Please try again.');
+      console.error('Error in upload process:', error);
+      let errorMessage = 'An unexpected error occurred. ';
+      if (error instanceof Error) {
+        errorMessage += error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        const supabaseError = error as { message?: string, details?: string };
+        errorMessage += supabaseError.message || supabaseError.details || 'Please try again.';
+      } else {
+        errorMessage += 'Please try again.';
+      }
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setIsUploading(false);
       URL.revokeObjectURL(objectUrl);
     }
-  }, [user, updateProfile, onClose]);
+  }, [user, updateUser, toast, onClose]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

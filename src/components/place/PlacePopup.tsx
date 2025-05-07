@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, ChevronRight, Star } from 'lucide-react';
+import { MapPin, ChevronRight, Star, Clock } from 'lucide-react';
 import type { Place } from '../../types/index';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -10,7 +10,21 @@ interface PlacePopupProps {
   onViewDetails: () => void;
 }
 
+function getTodayOpeningHours(weekdayText?: string[]): string | null {
+  if (!weekdayText?.length) return null;
+  
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const today = days[new Date().getDay()];
+  
+  const todayHours = weekdayText.find(text => text.startsWith(today));
+  if (!todayHours) return null;
+  
+  return todayHours.split(': ')[1];
+}
+
 export const PlacePopup: React.FC<PlacePopupProps> = ({ place, onViewDetails }) => {
+  const todayHours = getTodayOpeningHours(place.opening_hours?.weekday_text);
+
   return (
     <div className="bg-white rounded-lg overflow-hidden w-[280px] shadow-lg">
       <div className="p-4">
@@ -31,16 +45,25 @@ export const PlacePopup: React.FC<PlacePopupProps> = ({ place, onViewDetails }) 
             <Badge 
               key={type}
               variant="outline" 
-              className="bg-purple-50 text-purple-700 border-purple-200"
+              className="bg-gray-50 text-gray-700 border-gray-200"
             >
               {type}
             </Badge>
           ))}
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-          <MapPin size={16} className="flex-shrink-0" />
-          <span className="line-clamp-2">{place.formatted_address || 'Address not available'}</span>
+        <div className="space-y-2 mb-3">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <MapPin size={16} className="flex-shrink-0" />
+            <span className="line-clamp-2">{place.formatted_address || 'Address not available'}</span>
+          </div>
+          
+          {todayHours && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Clock size={16} className="flex-shrink-0" />
+              <span>{todayHours}</span>
+            </div>
+          )}
         </div>
 
         <Button

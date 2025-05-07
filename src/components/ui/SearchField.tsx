@@ -5,6 +5,8 @@ import { searchPlaces } from "@/app/actions/place"
 import { Place } from "@/types"
 import { useMapStore } from "@/store/useMapStore"
 import { Badge } from "@/components/ui/badge"
+import { FilterButton } from "@/components/ui/FilterButton"
+import mapboxgl from 'mapbox-gl'
 
 import { cn } from "@/lib/utils"
 import {
@@ -12,6 +14,14 @@ import {
   SearchFieldInput,
   SearchFieldClear,
 } from "@/components/ui/searchfield-base"
+
+// Extend Window interface
+declare global {
+  interface Window {
+    mapInstance: mapboxgl.Map;
+    popupsRef: React.MutableRefObject<{ [key: string]: mapboxgl.Popup }>;
+  }
+}
 
 interface CustomSearchFieldProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string
@@ -67,11 +77,28 @@ const SearchField = ({ className, ...props }: CustomSearchFieldProps) => {
     performSearch()
   }, [debouncedQuery])
 
-  const handleSelect = React.useCallback((placeId: string) => {
-    selectPlace(placeId)
-    setQuery("")
-    setIsFocused(false)
-  }, [selectPlace])
+  const handleSelect = React.useCallback((place: Place) => {
+    if (!place.location) return;
+    
+    const map = window.mapInstance;
+    if (!map) return;
+
+    // Update store state first - this will trigger the map's selectedPlaceId effect
+    selectPlace(place.id);
+    
+    // Fly to location
+    map.flyTo({
+      center: [place.location.longitude, place.location.latitude],
+      zoom: 16,
+      duration: 1500,
+      essential: true,
+      pitch: 45
+    });
+
+    // Clear search state
+    setQuery("");
+    setIsFocused(false);
+  }, [selectPlace]);
 
   const renderResults = () => {
     if (isLoading) {
@@ -125,7 +152,7 @@ const SearchField = ({ className, ...props }: CustomSearchFieldProps) => {
             <button
               key={place.id}
               className="flex w-full items-center rounded-md px-2 py-2 text-sm hover:bg-accent group"
-              onClick={() => handleSelect(place.id)}
+              onClick={() => handleSelect(place)}
             >
               <Store className="mr-2 h-4 w-4 text-muted-foreground group-hover:text-foreground" />
               <div className="flex flex-col items-start min-w-0">
@@ -148,7 +175,7 @@ const SearchField = ({ className, ...props }: CustomSearchFieldProps) => {
                       <Badge
                         key={type}
                         variant="secondary"
-                        className="text-[10px] py-0 px-1.5 bg-purple-50 text-purple-700 border-purple-200"
+                        className="text-[10px] py-0 px-1.5 bg-gray-50 text-gray-700 border-gray-200"
                       >
                         {type}
                       </Badge>
@@ -165,29 +192,33 @@ const SearchField = ({ className, ...props }: CustomSearchFieldProps) => {
 
   return (
     <div className={cn("relative w-full", className)} {...props}>
-      <BaseSearchField className="w-full">
-        <div className="flex w-full items-center rounded-md border bg-background px-3 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-          <SearchIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-          <SearchFieldInput 
-            placeholder="Search places or types (e.g. bar, restaurant)..." 
-            className="h-10 flex-1"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setIsFocused(true)}
-          />
-          {query && (
-            <SearchFieldClear 
-              onClick={() => setQuery("")}
-              className="h-4 w-4 opacity-50"
-            >
-              <X className="h-4 w-4" />
-            </SearchFieldClear>
-          )}
-        </div>
-      </BaseSearchField>
+      <div className="flex items-center gap-2">
+        <BaseSearchField className="flex-1">
+          <div className="flex w-full items-center rounded-md border bg-background px-3 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <SearchIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <SearchFieldInput 
+              placeholder="Search places or types (e.g. bar, restaurant)..." 
+              className="h-10 flex-1"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+            />
+            {query && (
+              <SearchFieldClear 
+                onClick={() => setQuery("")}
+                className="h-4 w-4 opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </SearchFieldClear>
+            )}
+          </div>
+        </BaseSearchField>
+        
+        <FilterButton />
+      </div>
 
       {(isFocused && (query.length > 0 || isLoading || filteredSuggestions.length > 0)) && (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-[60] max-h-[400px] overflow-y-auto rounded-md border bg-background shadow-lg">
+        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-[40] max-h-[400px] overflow-y-auto rounded-md border bg-background shadow-lg">
           {renderResults()}
         </div>
       )}
