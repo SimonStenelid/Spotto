@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
 import { Navigation } from './components/ui/Navigation';
-import { HomeIcon, BookmarkIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import { HomeIcon, BookmarkIcon, UserCircleIcon, MapIcon, CreditCardIcon } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
+import { supabase } from './lib/supabase';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -13,6 +14,8 @@ import ProfilePage from './pages/ProfilePage';
 import BookmarksPage from './pages/BookmarksPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import PricingPage from './pages/PricingPage';
+import MapPage from './pages/MapPage';
 
 // Route guard component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -30,6 +33,54 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <Navigate to="/login" replace />;
   }
   
+  return <>{children}</>;
+};
+
+// Map access guard component
+const MapAccessGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuthStore();
+  const [hasAccess, setHasAccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!user) {
+        setHasAccess(false);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const { data } = await supabase
+          .from('user_access')
+          .select('has_map_access')
+          .eq('user_id', user.id)
+          .single();
+
+        setHasAccess(data?.has_map_access || false);
+      } catch (error) {
+        console.error('Error checking map access:', error);
+        setHasAccess(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAccess();
+  }, [user]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return <Navigate to="/pricing" replace />;
+  }
+
   return <>{children}</>;
 };
 
@@ -78,6 +129,17 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/place/:id" element={<PlaceDetailPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route 
+            path="/map" 
+            element={
+              <ProtectedRoute>
+                <MapAccessGuard>
+                  <MapPage />
+                </MapAccessGuard>
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="/profile" 
             element={
@@ -103,6 +165,8 @@ function AppContent() {
       {authState === 'SIGNED_IN' && (
         <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex justify-around py-3 px-4 shadow-lg md:hidden">
           <NavItem to="/" icon={<HomeIcon className="h-6 w-6" />} label="Home" />
+          <NavItem to="/map" icon={<MapIcon className="h-6 w-6" />} label="Map" />
+          <NavItem to="/pricing" icon={<CreditCardIcon className="h-6 w-6" />} label="Pricing" />
           <NavItem to="/bookmarks" icon={<BookmarkIcon className="h-6 w-6" />} label="Saved" />
           <NavItem to="/profile" icon={<UserCircleIcon className="h-6 w-6" />} label="Profile" />
         </nav>
@@ -112,6 +176,7 @@ function AppContent() {
     </div>
   );
 }
+
 function App() {
   return (
     <Router>

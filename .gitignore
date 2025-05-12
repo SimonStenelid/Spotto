@@ -8,7 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Dependencies
-node_modules
+/node_modules
+/.pnp
+.pnp.js
 dist
 dist-ssr
 *.local
@@ -30,9 +32,9 @@ dist-ssr
 !.env.example
 
 # Build output
-build
+/build
 .next
-out
+/out/
 
 # Cache
 .cache
@@ -40,10 +42,20 @@ out
 .eslintcache
 
 # Coverage
-coverage
+/coverage
 .nyc_output
 
 # Misc
 *.pem
 .DS_Store*
 Thumbs.db
+
+# Local env files
+.env*.local
+
+# Vercel
+.vercel
+
+# Typescript
+*.tsbuildinfo
+next-env.d.ts

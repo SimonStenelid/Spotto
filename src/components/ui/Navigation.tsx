@@ -10,6 +10,8 @@ import {
   UserCircleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  MapIcon,
+  CreditCardIcon,
 } from "@heroicons/react/24/outline";
 import { useLocation, Link } from "react-router-dom";
 import { useState, createContext, useContext } from "react";
@@ -35,6 +37,8 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   { name: "Home", href: "/", icon: HomeIcon },
+  { name: "Map", href: "/map", icon: MapIcon },
+  { name: "Pricing", href: "/pricing", icon: CreditCardIcon },
   { name: "Bookmarks", href: "/bookmarks", icon: BookmarkIcon, requiresAuth: true },
   { name: "Account", href: "/profile", icon: UserCircleIcon, requiresAuth: true },
 ];

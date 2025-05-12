@@ -188,27 +188,28 @@ const UserProfile: React.FC = () => {
 
   return (
     <motion.div
-      className="container mx-auto py-8 px-4 max-w-4xl"
+      className="w-full max-w-full px-2 sm:px-4 md:max-w-4xl mx-auto py-4 md:py-8 max-h-screen overflow-y-auto"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <Card className="bg-white shadow-sm">
+      <Card className="bg-white shadow-sm w-full">
         <CardHeader className="pb-0">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold">Account Manager</h1>
+          <div className="flex items-center justify-between flex-col gap-4 sm:flex-row sm:gap-0">
+            <h1 className="text-2xl font-semibold text-center sm:text-left w-full sm:w-auto">Account Manager</h1>
             {!isEditing ? (
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="w-full sm:w-auto">
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit Profile
               </Button>
             ) : (
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto justify-center sm:justify-end">
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={handleCancel}
                   disabled={isSaving}
+                  className="w-1/2 sm:w-auto"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
@@ -218,6 +219,7 @@ const UserProfile: React.FC = () => {
                   size="sm" 
                   onClick={handleSave}
                   disabled={isSaving}
+                  className="w-1/2 sm:w-auto"
                 >
                   {isSaving ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -233,11 +235,11 @@ const UserProfile: React.FC = () => {
 
         <CardContent className="space-y-6">
           {/* Profile Section */}
-          <div className="flex items-start space-x-6 pt-6">
-            <div className="relative">
-              <Avatar className="h-32 w-32">
+          <div className="flex flex-col items-center space-y-4 md:flex-row md:items-start md:space-x-6 md:space-y-0 pt-6">
+            <div className="relative flex-shrink-0">
+              <Avatar className="h-24 w-24 sm:h-32 sm:w-32">
                 <AvatarImage src={user.avatar || undefined} className="object-cover" />
-                <AvatarFallback className="text-4xl">
+                <AvatarFallback className="text-3xl sm:text-4xl">
                   {user.username?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -261,10 +263,9 @@ const UserProfile: React.FC = () => {
                 </DialogContent>
               </Dialog>
             </div>
-            
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold">{user.username}</h2>
-              <p className="flex items-center text-sm text-muted-foreground mt-2">
+            <div className="flex-1 w-full text-center md:text-left">
+              <h2 className="text-xl font-semibold break-words">{user.username}</h2>
+              <p className="flex items-center justify-center md:justify-start text-sm text-muted-foreground mt-2">
                 <MapPin className="h-4 w-4 mr-1" />
                 {selectedCountry?.label}
               </p>
@@ -276,8 +277,7 @@ const UserProfile: React.FC = () => {
           {/* Personal Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Personal Information</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-y-4 md:grid-cols-2 md:gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
                 <Input 
@@ -287,7 +287,6 @@ const UserProfile: React.FC = () => {
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
                 />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
                 <Input 
@@ -297,7 +296,6 @@ const UserProfile: React.FC = () => {
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <div className="flex items-center space-x-2">
@@ -310,7 +308,6 @@ const UserProfile: React.FC = () => {
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="flex items-center space-x-2">
@@ -331,8 +328,7 @@ const UserProfile: React.FC = () => {
           {/* Address Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Address</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-y-4 md:grid-cols-2 md:gap-4">
               <div className="space-y-2">
                 <Label htmlFor="country">Country</Label>
                 <Popover open={open} onOpenChange={setOpen}>
@@ -380,7 +376,6 @@ const UserProfile: React.FC = () => {
                   </PopoverContent>
                 </Popover>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="city">City/State</Label>
                 <div className="flex items-center space-x-2">
@@ -393,7 +388,6 @@ const UserProfile: React.FC = () => {
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="postalCode">Postal Code</Label>
                 <Input 
@@ -409,11 +403,11 @@ const UserProfile: React.FC = () => {
           <Separator />
 
           {/* Account Actions */}
-          <div className="flex justify-end space-x-4 pt-4">
-            <Button variant="outline" onClick={() => signOut()}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end sm:space-x-4 pt-4">
+            <Button variant="outline" onClick={() => signOut()} className="w-full sm:w-auto">
               Sign Out
             </Button>
-            <Button variant="destructive">Delete Account</Button>
+            <Button variant="destructive" className="w-full sm:w-auto">Delete Account</Button>
           </div>
         </CardContent>
       </Card>
