@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin } from 'lucide-react';
-import { RestrictedMap } from '../components/map/RestrictedMap';
+import Map from '../components/map/Map';
 import { useMapStore } from '../store/useMapStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { cn } from '@/lib/utils';
@@ -25,7 +25,7 @@ const HomePage: React.FC = () => {
     <div className="relative w-full h-screen overflow-hidden bg-gray-100">
       {/* Map Container */}
       <div className="w-full h-full transition-all duration-300">
-        <RestrictedMap />
+        <Map />
       </div>
       
       {/* Loading Indicator */}
