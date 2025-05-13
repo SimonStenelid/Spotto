@@ -57,26 +57,13 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
 
   // If user is not authenticated, redirect to login
-  if (!session && request.nextUrl.pathname.startsWith('/map')) {
+  if (!session && request.nextUrl.pathname.startsWith('/bookmarks')) {
     return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  // If user is authenticated, check if they have map access
-  if (session && request.nextUrl.pathname.startsWith('/map')) {
-    const { data: access } = await supabase
-      .from('user_access')
-      .select('has_map_access')
-      .eq('user_id', session.user.id)
-      .single();
-
-    if (!access?.has_map_access) {
-      return NextResponse.redirect(new URL('/pricing', request.url));
-    }
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ['/map/:path*'],
+  matcher: ['/bookmarks/:path*'],
 }; 
