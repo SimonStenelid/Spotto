@@ -1,15 +1,19 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import LoginForm from '../components/auth/LoginForm';
 import { MapIllustration } from '../components/auth/MapIllustration';
 import { useAuthStore } from '../store/useAuthStore';
 
 const LoginPage: React.FC = () => {
   const { authState } = useAuthStore();
+  const location = useLocation();
+  
+  // Get return URL from location state
+  const from = location.state?.from?.pathname || '/app';
   
   // Redirect if already logged in
   if (authState === 'SIGNED_IN') {
-    return <Navigate to="/" replace />;
+    return <Navigate to={from} replace />;
   }
   
   return (

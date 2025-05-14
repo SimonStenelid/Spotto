@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,16 +15,22 @@ const supabase = createClient(
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signIn, error, isLoading } = useAuthStore();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   
+  // Get return URL from location state
+  const from = location.state?.from?.pathname || '/app';
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signIn(email, password);
-    navigate('/');
+    const success = await signIn(email, password);
+    if (success) {
+      navigate(from, { replace: true });
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -35,6 +41,7 @@ const LoginForm: React.FC = () => {
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
+            redirectTo: window.location.origin + from,
           },
         },
       });

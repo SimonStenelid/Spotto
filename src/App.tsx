@@ -1,11 +1,10 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
 import { Navigation } from './components/ui/Navigation';
 import { HomeIcon, BookmarkIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
-import { supabase } from './lib/supabase';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -18,6 +17,7 @@ import SignupPage from './pages/SignupPage';
 // Route guard component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { authState } = useAuthStore();
+  const location = useLocation();
   
   if (authState === 'LOADING') {
     return (
@@ -28,7 +28,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
   
   if (authState === 'SIGNED_OUT') {
-    return <Navigate to="/login" replace />;
+    // Redirect to login with the return URL
+    return <Navigate to="/app/login" state={{ from: location }} replace />;
   }
   
   return <>{children}</>;
@@ -57,7 +58,7 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label }) => {
   );
 };
 
-function AppContent() {
+function App() {
   const { initialize, authState } = useAuthStore();
   
   useEffect(() => {
@@ -77,10 +78,14 @@ function AppContent() {
         "relative h-screen overflow-hidden"
       )}>
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/place/:id" element={<PlaceDetailPage />} />
+          <Route index element={<HomePage />} />
+          <Route path="place/:id" element={
+            <ProtectedRoute>
+              <PlaceDetailPage />
+            </ProtectedRoute>
+          } />
           <Route 
-            path="/profile" 
+            path="profile" 
             element={
               <ProtectedRoute>
                 <ProfilePage />
@@ -88,37 +93,31 @@ function AppContent() {
             } 
           />
           <Route 
-            path="/bookmarks" 
+            path="bookmarks" 
             element={
               <ProtectedRoute>
                 <BookmarksPage />
               </ProtectedRoute>
             } 
           />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route path="signup" element={<SignupPage />} />
+          {/* Catch-all redirect to home */}
+          <Route path="*" element={<Navigate to="/app" replace />} />
         </Routes>
       </main>
       
-      {/* Mobile Navigation */}
+      {/* Mobile Navigation - Only show when authenticated */}
       {authState === 'SIGNED_IN' && (
         <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex justify-around py-3 px-4 shadow-lg md:hidden">
-          <NavItem to="/" icon={<HomeIcon className="h-6 w-6" />} label="Home" />
-          <NavItem to="/bookmarks" icon={<BookmarkIcon className="h-6 w-6" />} label="Saved" />
-          <NavItem to="/profile" icon={<UserCircleIcon className="h-6 w-6" />} label="Profile" />
+          <NavItem to="/app" icon={<HomeIcon className="h-6 w-6" />} label="Home" />
+          <NavItem to="/app/bookmarks" icon={<BookmarkIcon className="h-6 w-6" />} label="Saved" />
+          <NavItem to="/app/profile" icon={<UserCircleIcon className="h-6 w-6" />} label="Profile" />
         </nav>
       )}
 
       <Toaster />
     </div>
-  );
-}
-
-function App() {
-  return (
-    <Router>
-      <AppContent />
-    </Router>
   );
 }
 

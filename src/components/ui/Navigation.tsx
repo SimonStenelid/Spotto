@@ -34,9 +34,9 @@ interface NavigationItem {
 }
 
 const navigationItems: NavigationItem[] = [
-  { name: "Home", href: "/", icon: HomeIcon },
-  { name: "Bookmarks", href: "/bookmarks", icon: BookmarkIcon, requiresAuth: true },
-  { name: "Account", href: "/profile", icon: UserCircleIcon, requiresAuth: true },
+  { name: "Home", href: "/app", icon: HomeIcon },
+  { name: "Bookmarks", href: "/app/bookmarks", icon: BookmarkIcon, requiresAuth: true },
+  { name: "Account", href: "/app/profile", icon: UserCircleIcon, requiresAuth: true },
 ];
 
 export function Navigation() {
@@ -107,6 +107,25 @@ export function Navigation() {
             })}
           </div>
         </ScrollArea>
+
+        {/* Back to Spotto Button */}
+        <div className={cn(
+          "border-t border-gray-100 p-4",
+          isCollapsed ? "px-2" : "px-4"
+        )}>
+          <Link to="/">
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start gap-x-3 text-base font-normal text-gray-600 hover:text-gray-900",
+                isCollapsed ? "justify-center px-2" : "px-4"
+              )}
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+              {!isCollapsed && "Back to Spotto"}
+            </Button>
+          </Link>
+        </div>
       </div>
     </NavigationContext.Provider>
   );
