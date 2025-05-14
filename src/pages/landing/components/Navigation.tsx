@@ -32,7 +32,12 @@ export function Navigation({ onMapClick }: NavigationProps) {
         <div className="flex gap-10">
           <a href="#features" className="text-gray-700 font-medium text-base hover:text-black transition-colors">Features</a>
           <a href="#pricing" className="text-gray-700 font-medium text-base hover:text-black transition-colors">Pricing</a>
-          <a href="#about" className="text-gray-700 font-medium text-base hover:text-black transition-colors">About</a>
+          <span 
+            onClick={() => navigate('/documentation')} 
+            className="text-gray-700 font-medium text-base hover:text-black transition-colors cursor-pointer"
+          >
+            Documentation
+          </span>
           <a href="#blog" className="text-gray-700 font-medium text-base hover:text-black transition-colors">Blog</a>
         </div>
 

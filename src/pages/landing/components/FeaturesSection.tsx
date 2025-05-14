@@ -1,14 +1,22 @@
+'use client';
+
+import Image from 'next/image';
+
 interface FeatureCardProps {
-  icon: React.ReactNode;
+  iconSrc: string;
   title: string;
   description: string;
 }
 
-function FeatureCard({ icon, title, description }: FeatureCardProps) {
+function FeatureCard({ iconSrc, title, description }: FeatureCardProps) {
   return (
     <div className="space-y-6">
       <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center">
-        {icon}
+        <img 
+          src={iconSrc}
+          alt={title}
+          className="w-8 h-8 object-contain"
+        />
       </div>
       <h3 className="text-xl font-semibold text-black">{title}</h3>
       <p className="text-base text-gray-700 leading-6">{description}</p>
@@ -32,17 +40,17 @@ export function FeaturesSection() {
         {/* Features Grid */}
         <div className="grid grid-cols-3 gap-10">
           <FeatureCard
-            icon={<div className="w-8 h-8" />}
+            iconSrc="/icons/location.png"
             title="Real-time Location"
             description="See your position in real-time and discover places around you with precise accuracy."
           />
           <FeatureCard
-            icon={<div className="w-8 h-8" />}
+            iconSrc="/icons/all-in-one.png"
             title="Everything in One Place"
             description="Find everything in one place—no more blogs, websites, or endless searching. Recommendations gathered by locals and our experts."
           />
           <FeatureCard
-            icon={<div className="w-8 h-8" />}
+            iconSrc="/icons/info.png"
             title="Detailed Information"
             description="Access comprehensive details about each location, including reviews, hours, and insider tips."
           />
