@@ -72,9 +72,9 @@ function PricingTier({ name, price, description, features, isPopular, buttonText
   );
 }
 
-export function PricingSection() {
+export function PricingSection({ id }: { id?: string }) {
   return (
-    <section className="w-full py-20 px-4 sm:px-6 lg:px-20 bg-white">
+    <section id={id} className="w-full py-20 px-4 sm:px-6 lg:px-20 bg-white">
       <div className="max-w-[1240px] mx-auto">
         {/* Section Header */}
         <div className="max-w-[800px] mx-auto text-center space-y-6 mb-20">

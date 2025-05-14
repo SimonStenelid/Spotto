@@ -38,7 +38,12 @@ export function Navigation({ onMapClick }: NavigationProps) {
           >
             Documentation
           </span>
-          <a href="#blog" className="text-gray-700 font-medium text-base hover:text-black transition-colors">Blog</a>
+          <span 
+            onClick={() => navigate('/blog')} 
+            className="text-gray-700 font-medium text-base hover:text-black transition-colors cursor-pointer"
+          >
+            Blog
+          </span>
         </div>
 
         {/* CTA Buttons */}
