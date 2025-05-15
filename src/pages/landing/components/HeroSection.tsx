@@ -1,38 +1,4 @@
-import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import mapPreview from '@/assets/images/map-preview.png';
-
-interface HeroImageProps {
-  src?: string;
-  alt?: string;
-}
-
-function HeroImage({ src, alt = "Stockholm map preview" }: HeroImageProps) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  return (
-    <div className="relative w-[500px] h-[500px] rounded-[300px] overflow-hidden bg-black">
-      {src ? (
-        <img
-          src={src}
-          alt={alt}
-          onLoad={() => setIsLoading(false)}
-          onError={() => setError(true)}
-          className={cn(
-            "w-full h-full object-cover",
-            "transition-opacity duration-300",
-            isLoading ? "opacity-0" : "opacity-100"
-          )}
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center text-white/50">
-          <p className="text-sm">Add your map preview image here</p>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function HeroSection() {
   return (
@@ -69,9 +35,20 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* Hero Image */}
-        <div className="w-full lg:w-auto flex justify-center">
-          <HeroImage src={mapPreview} alt="Stockholm interactive map preview" />
+        {/* Hero Video */}
+        <div className="w-full lg:w-auto flex justify-center relative z-10">
+          <div className="relative w-[500px] h-[500px] rounded-[300px] overflow-hidden">
+            <video
+              className="absolute inset-0 w-full h-full object-cover"
+              autoPlay
+              loop
+              muted
+              playsInline
+            >
+              <source src="/videos/3d-spin-globe.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
         </div>
       </div>
     </section>
