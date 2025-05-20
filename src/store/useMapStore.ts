@@ -77,7 +77,7 @@ export const useMapStore = create<Store>((set, get) => ({
     if (!map) return;
 
     map.flyTo({
-      center: [place.location.longitude, place.location.latitude],
+      center: [place.location.lng, place.location.lat],
       zoom: 16,
       duration: 1500,
       essential: true

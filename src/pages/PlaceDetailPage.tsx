@@ -18,7 +18,10 @@ const PlaceDetailPage: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('places')
-          .select('*')
+          .select(`
+            *,
+            reviews (*)
+          `)
           .eq('id', id)
           .single();
 

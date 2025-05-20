@@ -7,7 +7,6 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Clock, 
   MapPin, 
-  Store, 
   Star, 
   Heart, 
   MessageCircle, 
@@ -15,10 +14,7 @@ import {
   Bookmark,
   Phone,
   Globe,
-  DollarSign,
-  Camera,
-  X,
-  ChevronLeft
+  X
 } from 'lucide-react';
 import type { Place } from '@/types';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -26,23 +22,76 @@ import { cn } from '@/lib/utils';
 import { addBookmark, removeBookmark } from '@/lib/supabase';
 import { toast } from 'sonner';
 
+// Add custom animation keyframes
+const cardAnimationClass = `
+  @keyframes card-entrance {
+    0% {
+      opacity: 0;
+      transform: perspective(1000px) rotateX(10deg) scale(0.9) translateY(20px);
+    }
+    50% {
+      opacity: 1;
+      transform: perspective(1000px) rotateX(-5deg) scale(1.02) translateY(-10px);
+    }
+    100% {
+      opacity: 1;
+      transform: perspective(1000px) rotateX(0) scale(1) translateY(0);
+    }
+  }
+
+  .card-animate {
+    animation: card-entrance 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    transform-origin: center bottom;
+    backface-visibility: hidden;
+  }
+`;
+
 interface PlaceDetailsSheetProps {
   place: Place;
   isOpen: boolean;
   onClose: () => void;
 }
 
+function formatOpeningHours(weekdayText?: string[]) {
+  if (!weekdayText?.length) return null;
+  
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const today = days[new Date().getDay()];
+  
+  const todayHours = weekdayText.find(text => text.startsWith(today));
+  if (!todayHours) return null;
+  
+  const hours = todayHours.split(': ')[1];
+  const isOpen = true; // This should be calculated based on current time
+  const closingTime = hours.split(' - ')[1];
+  
+  return {
+    isOpen,
+    closingTime,
+    hours: weekdayText
+  };
+}
+
 export function PlaceDetailsSheet({ place, isOpen, onClose }: PlaceDetailsSheetProps) {
   const { user, updateUserBookmarks } = useAuthStore();
-  const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const [isBookmarked, setIsBookmarked] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // Check if place is bookmarked on mount and when user changes
+  const openingHours = formatOpeningHours(place.opening_hours?.weekday_text);
+
   useEffect(() => {
-    if (user && place) {
+    // Inject custom animation styles
+    const styleSheet = document.createElement("style");
+    styleSheet.textContent = cardAnimationClass;
+    document.head.appendChild(styleSheet);
+
+    if (user && place && user.bookmarks) {
       setIsBookmarked(user.bookmarks.includes(place.id));
     }
+
+    return () => {
+      document.head.removeChild(styleSheet);
+    };
   }, [user, place]);
 
   const handleBookmarkToggle = async () => {
@@ -56,14 +105,14 @@ export function PlaceDetailsSheet({ place, isOpen, onClose }: PlaceDetailsSheetP
       if (isBookmarked) {
         const { error } = await removeBookmark(user.id, place.id);
         if (error) throw error;
-        const newBookmarks = user.bookmarks.filter(id => id !== place.id);
+        const newBookmarks = (user.bookmarks || []).filter(id => id !== place.id);
         updateUserBookmarks(newBookmarks);
         setIsBookmarked(false);
         toast.success('Removed from bookmarks');
       } else {
         const { error } = await addBookmark(user.id, place.id);
         if (error) throw error;
-        const newBookmarks = [...user.bookmarks, place.id];
+        const newBookmarks = [...(user.bookmarks || []), place.id];
         updateUserBookmarks(newBookmarks);
         setIsBookmarked(true);
         toast.success('Added to bookmarks');
@@ -76,269 +125,192 @@ export function PlaceDetailsSheet({ place, isOpen, onClose }: PlaceDetailsSheetP
     }
   };
 
-  // Calculate stats
-  const likesCount = place.reactions 
-    ? Object.values(place.reactions).reduce((a, b) => a + b, 0)
-    : 0;
-  const reviewsCount = place.reviews?.length || 0;
-
-  // Format price level
-  const priceLevel = place.price_level 
-    ? Array(place.price_level).fill('$').join('')
-    : '$$';
-
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         side="bottom" 
-        className="h-[90vh] p-0 rounded-t-xl"
+        className="h-[100dvh] w-screen inset-0 p-6 bg-[#0f0f0f]/50 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-300"
       >
-        {/* Header with image carousel */}
-        <div className="relative h-64 w-full">
-          <img
-            src={place.images?.[currentImageIndex] || '/placeholder-image.jpg'}
-            alt={place.name}
-            className="w-full h-full object-cover"
-          />
-          
-          {/* Navigation overlay */}
-          {place.images?.length > 1 && (
-            <div className="absolute inset-0 flex justify-between items-center px-4">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 rounded-full bg-black/30 text-white hover:bg-black/50"
-                onClick={() => setCurrentImageIndex(i => (i - 1 + place.images.length) % place.images.length)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 rounded-full bg-black/30 text-white hover:bg-black/50"
-                onClick={() => setCurrentImageIndex(i => (i + 1) % place.images.length)}
-              >
-                <ChevronLeft className="h-4 w-4 rotate-180" />
-              </Button>
-            </div>
-          )}
-          
-          {/* Image counter */}
-          {place.images?.length > 1 && (
-            <div className="absolute bottom-4 right-4 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-              {currentImageIndex + 1}/{place.images.length}
-            </div>
-          )}
-          
-          {/* Close button */}
-          <Button
-            size="icon"
-            variant="ghost"
-            className="absolute right-4 top-4 h-8 w-8 rounded-full bg-black/30 text-white hover:bg-black/50"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm fixed top-6 right-6 z-50 animate-in fade-in zoom-in duration-300"
+          onClick={onClose}
+        >
+          <X className="h-5 w-5 text-white" />
+        </Button>
 
-        <ScrollArea className="h-[calc(90vh-16rem)] px-6">
-          {/* Title and actions */}
-          <div className="flex justify-between items-start py-4">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900">{place.name}</h2>
-              <div className="flex items-center gap-2 mt-1">
-                {typeof place.rating === 'number' && (
-                  <Badge variant="secondary" className="bg-yellow-50 text-yellow-700">
-                    <Star size={14} className="mr-1 fill-yellow-500" />
-                    {place.rating.toFixed(1)}
-                  </Badge>
-                )}
-                <span className="text-sm text-gray-500">•</span>
-                <Badge variant="outline" className="text-gray-700">
-                  {priceLevel}
-                </Badge>
-                <span className="text-sm text-gray-500">•</span>
-                <Badge variant="outline" className="capitalize text-gray-700">
+        <div className="w-full max-w-[1000px] mx-auto bg-white rounded-[24px] overflow-hidden max-h-[90dvh] card-animate">
+          <ScrollArea className="h-[calc(90dvh-32px)]">
+            <div className="pb-32">
+              {/* Header */}
+              <div className="px-8 pt-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+                <Badge 
+                  variant="secondary" 
+                  className="bg-[#f5f5f5] text-[#333333] mb-1 px-4 py-2 rounded-2xl text-sm font-medium"
+                >
                   {place.category?.replace(/_/g, ' ')}
                 </Badge>
+                <h2 className="text-[32px] font-bold text-black leading-[38px] mb-3">{place.name}</h2>
               </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button size="icon" variant="outline">
-                <Share2 className="h-4 w-4" />
-              </Button>
-              <Button 
-                size="icon" 
-                variant="outline"
-                onClick={handleBookmarkToggle}
-                disabled={isLoading}
-              >
-                <Bookmark 
-                  className={cn(
-                    "h-4 w-4",
-                    isBookmarked && "fill-current",
-                    isLoading && "animate-pulse"
-                  )} 
-                />
-              </Button>
-            </div>
-          </div>
 
-          {/* Stats */}
-          <div className="flex gap-4 py-4">
-            <div className="flex items-center gap-1">
-              <Heart size={16} className="text-pink-500" />
-              <span className="text-sm text-gray-600">{likesCount} likes</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <MessageCircle size={16} className="text-purple-500" />
-              <span className="text-sm text-gray-600">{reviewsCount} reviews</span>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Key information */}
-          <div className="space-y-4 py-4">
-            <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-gray-500 mt-1" />
-              <div>
-                <h3 className="font-medium text-gray-900">Location</h3>
-                <p className="text-gray-600">{place.formatted_address}</p>
-              </div>
-            </div>
-
-            {place.opening_hours?.weekday_text && (
-              <div className="flex items-start gap-3">
-                <Clock className="h-5 w-5 text-gray-500 mt-1" />
-                <div>
-                  <h3 className="font-medium text-gray-900">Opening Hours</h3>
-                  <div className="space-y-1 mt-1">
-                    {place.opening_hours.weekday_text.map((hours, index) => (
-                      <p key={index} className="text-sm text-gray-600">{hours}</p>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {place.phone && (
-              <div className="flex items-start gap-3">
-                <Phone className="h-5 w-5 text-gray-500 mt-1" />
-                <div>
-                  <h3 className="font-medium text-gray-900">Phone</h3>
-                  <a href={`tel:${place.phone}`} className="text-gray-600 hover:text-gray-900">
-                    {place.phone}
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {place.website && (
-              <div className="flex items-start gap-3">
-                <Globe className="h-5 w-5 text-gray-500 mt-1" />
-                <div>
-                  <h3 className="font-medium text-gray-900">Website</h3>
-                  <a 
-                    href={place.website} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-gray-600 hover:text-gray-900 break-all"
-                  >
-                    {place.website}
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* AI Summary */}
-          {place.ai_summary && (
-            <>
-              <div className="py-4">
-                <h3 className="font-medium text-gray-900 mb-2">TL;DR</h3>
-                <p className="text-gray-600 whitespace-pre-line">{place.ai_summary}</p>
-              </div>
-              <Separator />
-            </>
-          )}
-
-          {/* Description */}
-          {place.description && (
-            <>
-              <div className="py-4">
-                <h3 className="font-medium text-gray-900 mb-2">About</h3>
-                <p className="text-gray-600 whitespace-pre-line">{place.description}</p>
-              </div>
-              <Separator />
-            </>
-          )}
-
-          {/* Reviews */}
-          <div className="py-4">
-            <h3 className="font-medium text-gray-900 mb-4">Reviews</h3>
-            {place.reviews?.length > 0 ? (
-              <div className="space-y-4">
-                {place.reviews.map((review, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {review.userAvatar ? (
-                          <img 
-                            src={review.userAvatar} 
-                            alt={review.userName}
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                            {review.userName[0] || '?'}
+              {/* Content Grid */}
+              <div className="px-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Left Column */}
+                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+                    {/* Hours Card */}
+                    <div className="p-5 rounded-2xl bg-gradient-to-r from-white to-[#f9f9f9] border border-[#f0f0f0]">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-semibold text-[#0f0f0f]">Opening Hours</h3>
+                        <div className="h-8 w-8 rounded-2xl bg-[#f5f5f5] flex items-center justify-center">
+                          <Clock className="h-4 w-4" />
+                        </div>
+                      </div>
+                      
+                      {openingHours && (
+                        <>
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="h-2 w-2 rounded-full bg-[#4caf50]" />
+                            <span className="text-sm font-medium text-[#4caf50]">Open Now</span>
+                            <span className="text-sm text-[#666666]">• Closes at {openingHours.closingTime}</span>
                           </div>
-                        )}
-                        <span className="font-medium">{review.userName}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Star size={14} className="text-yellow-400 fill-yellow-400" />
-                        <span className="ml-1 text-sm">{review.rating}</span>
-                      </div>
+                          <div className="space-y-1">
+                            {openingHours.hours.map((day, index) => {
+                              const [dayName, hours] = day.split(': ');
+                              return (
+                                <div key={index} className="flex justify-between text-sm">
+                                  <span className="text-[#666666] w-20">{dayName}</span>
+                                  <span className="text-[#333333]">{hours}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-gray-600 text-sm">{review.text}</p>
-                      <span className="text-gray-400 text-xs">•</span>
-                      <time className="text-gray-400 text-xs" dateTime={review.createdAt}>
-                        {new Date(review.createdAt).toLocaleDateString()}
-                      </time>
+
+                    {/* Rating Card */}
+                    <div className="p-5 rounded-2xl bg-gradient-to-r from-white to-[#f9f9f9] border border-[#f0f0f0]">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-semibold text-[#0f0f0f]">Ratings & Reviews</h3>
+                        <div className="h-8 w-8 rounded-2xl bg-[#f5f5f5] flex items-center justify-center">
+                          <Star className="h-4 w-4" />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-[32px] font-bold text-[#0f0f0f]">{place.rating?.toFixed(1)}</span>
+                        <div className="flex gap-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star 
+                              key={i}
+                              className={cn(
+                                "h-4 w-4",
+                                i < Math.floor(place.rating || 0) 
+                                  ? "text-yellow-400 fill-yellow-400" 
+                                  : "text-gray-300 fill-gray-300"
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-[#666666]">
+                        Based on {place.reviews?.length || 0} reviews
+                      </p>
+                    </div>
+
+                    {/* Tips Card */}
+                    {place.reviews && place.reviews.length > 0 && (
+                      <div className="p-5 rounded-2xl bg-gradient-to-r from-white to-[#f9f9f9] border border-[#f0f0f0]">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-base font-semibold text-[#0f0f0f]">Local Tips</h3>
+                          <div className="h-8 w-8 rounded-2xl bg-[#f5f5f5] flex items-center justify-center">
+                            <MessageCircle className="h-4 w-4" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-6">
+                          {place.reviews.slice(0, 2).map((review, index) => (
+                            <div key={index} className="flex gap-4">
+                              <div className="h-10 w-10 rounded-[20px] bg-[#f5f5f5] flex items-center justify-center flex-shrink-0">
+                                <span className="text-base font-medium text-[#333333]">
+                                  {review.userName?.slice(0, 2).toUpperCase()}
+                                </span>
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-medium text-[#0f0f0f] mb-1">
+                                  {review.userName}
+                                </h4>
+                                <p className="text-sm leading-[21px] text-[#333333]">
+                                  {review.text}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
+                    {/* Description/About Card */}
+                    <div className="p-5 rounded-2xl bg-gradient-to-r from-white to-[#f9f9f9] border border-[#f0f0f0]">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-semibold text-[#0f0f0f]">About</h3>
+                        <div className="h-8 w-8 rounded-2xl bg-[#f5f5f5] flex items-center justify-center">
+                          <Globe className="h-4 w-4" />
+                        </div>
+                      </div>
+                      
+                      <p className="text-[15px] leading-6 text-[#333333] mb-6">
+                        {place.ai_summary || place.description || 'No description available.'}
+                      </p>
+
+                      <div className="flex flex-wrap gap-2">
+                        {place.types?.map((type) => (
+                          <Badge 
+                            key={type}
+                            variant="secondary" 
+                            className="bg-[#f5f5f5] text-[#333333] px-3 py-1.5 rounded-2xl text-xs"
+                          >
+                            {type.replace(/_/g, ' ')}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
-            ) : (
-              <p className="text-gray-500 text-sm">No reviews yet. Be the first to share your experience!</p>
-            )}
-          </div>
-        </ScrollArea>
+            </div>
+          </ScrollArea>
 
-        {/* Bottom action bar */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t">
-          <Button 
-            className="w-full" 
-            size="lg"
-            onClick={handleBookmarkToggle}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <span className="flex items-center gap-2">
-                <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                Updating...
-              </span>
-            ) : isBookmarked ? (
-              'Remove from bookmarks'
-            ) : (
-              'Save this place'
-            )}
-          </Button>
+          {/* Action Buttons */}
+          <div className="absolute bottom-8 right-8 flex gap-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-400">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-12 w-12 rounded-3xl bg-[#f5f5f5] hover:bg-[#f0f0f0]"
+              onClick={handleBookmarkToggle}
+              disabled={isLoading}
+            >
+              <Bookmark 
+                className={cn(
+                  "h-5 w-5",
+                  isBookmarked && "fill-current"
+                )} 
+              />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-12 w-12 rounded-3xl bg-[#f5f5f5] hover:bg-[#f0f0f0]"
+            >
+              <Share2 className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

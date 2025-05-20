@@ -17,7 +17,7 @@ import {
   Landmark, 
   MapPin,
   ShoppingBag,
-  Dumbbell
+  Ticket
 } from 'lucide-react';
 import { PlaceDetailsSheet } from '../place/PlaceDetailsSheet';
 
@@ -33,7 +33,7 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   'restaurant': UtensilsCrossed,
   'bar': Beer,
   'cultural': Landmark,
-  'activity': Dumbbell,
+  'activity': Ticket,
   'shopping': ShoppingBag,
 };
 
@@ -42,18 +42,18 @@ interface MapProps {
 }
 
 // Add this helper function before the Map component
-function isValidCoordinate(location: { longitude: number; latitude: number } | null | undefined): boolean {
+function isValidCoordinate(location: { lng: number; lat: number } | null | undefined): boolean {
   if (!location) return false;
-  const { longitude, latitude } = location;
+  const { lng, lat } = location;
   return (
-    typeof longitude === 'number' && 
-    typeof latitude === 'number' && 
-    !isNaN(longitude) && 
-    !isNaN(latitude) &&
-    longitude >= -180 && 
-    longitude <= 180 &&
-    latitude >= -90 && 
-    latitude <= 90
+    typeof lng === 'number' && 
+    typeof lat === 'number' && 
+    !isNaN(lng) && 
+    !isNaN(lat) &&
+    lng >= -180 && 
+    lng <= 180 &&
+    lat >= -90 && 
+    lat <= 90
   );
 }
 
@@ -68,12 +68,12 @@ function centerMapOnPlace(map: mapboxgl.Map, place: Place) {
   // Calculate vertical offset to account for popup height and UI elements
   // Popup height is approximately 200px, and we want it centered in the viewport
   const popupHeight = 200;
-  const verticalOffset = (popupHeight / 2) / (111320 * Math.cos(place.location.latitude * Math.PI / 180));
+  const verticalOffset = (popupHeight / 2) / (111320 * Math.cos(place.location.lat * Math.PI / 180));
   
   map.easeTo({
     center: [
-      place.location.longitude,
-      place.location.latitude + verticalOffset // Add offset to move point down
+      place.location.lng,
+      place.location.lat + verticalOffset // Add offset to move point down
     ],
     duration: 500,
     zoom: Math.max(map.getZoom() || 13, 14),
@@ -247,6 +247,13 @@ const Map: React.FC<MapProps> = ({ className }) => {
     
     // Add new markers with custom styling and animations
     filteredPlaces.forEach(place => {
+      // Debug logging
+      console.log(`Creating marker for ${place.name}:`, {
+        location: place.location,
+        category: place.category,
+        isValidLocation: isValidCoordinate(place.location)
+      });
+
       // Validate coordinates before creating marker
       if (!isValidCoordinate(place.location)) {
         console.warn(`Invalid coordinates for place: ${place.name}`);
@@ -255,6 +262,11 @@ const Map: React.FC<MapProps> = ({ className }) => {
 
       // Get the icon based on place category
       const IconComponent = CATEGORY_ICONS[place.category] || MapPin;
+      console.log(`Icon for ${place.name}:`, {
+        category: place.category,
+        hasCustomIcon: place.category in CATEGORY_ICONS,
+        usingFallback: IconComponent === MapPin
+      });
       
       // Create marker element with icon
       const el = document.createElement('div');
@@ -317,7 +329,7 @@ const Map: React.FC<MapProps> = ({ className }) => {
         rotationAlignment: 'viewport',
         pitchAlignment: 'viewport'
       })
-        .setLngLat([place.location!.longitude, place.location!.latitude])
+        .setLngLat([place.location!.lng, place.location!.lat])
         .addTo(map);
 
       // Store references
@@ -326,6 +338,7 @@ const Map: React.FC<MapProps> = ({ className }) => {
       
       // Add click handler to marker
       el.addEventListener('click', (e: Event) => {
+        console.log(`Marker clicked for ${place.name}`);
         e.stopPropagation();
         
         // Close any open popups
@@ -333,7 +346,7 @@ const Map: React.FC<MapProps> = ({ className }) => {
         
         // Show this popup
         popup
-          .setLngLat([place.location!.longitude, place.location!.latitude])
+          .setLngLat([place.location!.lng, place.location!.lat])
           .addTo(map);
         
         // Center the map on the place

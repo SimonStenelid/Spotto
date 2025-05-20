@@ -6,8 +6,8 @@ export interface Place {
   description: string;
   formatted_address: string;
   location: {
-    latitude: number;
-    longitude: number;
+    lat: number;
+    lng: number;
   };
   category: Database['public']['Enums']['place_category'];
   types: string[];
