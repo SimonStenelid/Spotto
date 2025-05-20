@@ -6,6 +6,7 @@ interface AuthStore {
   authState: AuthState;
   user: User | null;
   profile: any | null;
+  membership: 'paid' | 'free' | null;
   isLoading: boolean;
   error: string | null;
   
@@ -41,40 +42,90 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   authState: 'LOADING',
   user: null,
   profile: null,
+  membership: null,
   isLoading: false,
   error: null,
   
   initialize: async () => {
+    console.log('=== Auth Store Initialize Start ===');
     try {
       set({ isLoading: true, error: null });
       
       // Get current session
       const { user: currentUser, error: userError } = await getCurrentUser();
-      if (userError) throw userError;
+      console.log('Current user session:', {
+        userId: currentUser?.id,
+        email: currentUser?.email,
+        isAuthenticated: !!currentUser
+      });
+      
+      if (userError) {
+        console.error('Session error:', userError);
+        throw userError;
+      }
       
       if (!currentUser) {
-        set({ authState: 'SIGNED_OUT', user: null, profile: null });
+        console.log('No active session, signing out');
+        set({ authState: 'SIGNED_OUT', user: null, profile: null, membership: null });
         return;
       }
       
       // Get user profile
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .single();
+
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        throw profileError;
+      }
+
+      console.log('Profile data:', {
+        hasProfile: !!profile,
+        profileId: profile?.id
+      });
+
+      // Get membership status with explicit error handling
+      const { data: membershipData, error: membershipError } = await supabase
+        .from('Membership')
+        .select('membership')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (membershipError) {
+        console.error('Membership error:', membershipError);
+        // Don't throw, just log the error and default to free
+      }
+
+      console.log('Membership query:', {
+        userId: currentUser.id,
+        membershipData,
+        error: membershipError
+      });
       
       if (profile) {
+        const membership = membershipData?.membership || 'free';
+        console.log('Setting final auth state:', {
+          authState: 'SIGNED_IN',
+          userId: currentUser.id,
+          membership,
+          hasMembershipData: !!membershipData
+        });
         set({
           authState: 'SIGNED_IN',
           user: mapProfileToUser(profile, currentUser.email!),
           profile,
+          membership
         });
       }
     } catch (error) {
+      console.error('Auth initialization error:', error);
       set({ error: (error as Error).message });
     } finally {
       set({ isLoading: false });
+      console.log('=== Auth Store Initialize End ===');
     }
   },
   
@@ -95,12 +146,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         .select('*')
         .eq('id', data.user.id)
         .single();
+
+      // Get membership status
+      const { data: membershipData } = await supabase
+        .from('Membership')
+        .select('membership')
+        .eq('id', data.user.id)
+        .single();
       
       if (profile) {
         set({
           authState: 'SIGNED_IN',
           user: mapProfileToUser(profile, data.user.email!),
           profile,
+          membership: membershipData?.membership || 'free'
         });
       }
     } catch (error) {
@@ -128,12 +187,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         .select('*')
         .eq('id', data.user.id)
         .single();
+
+      // Get membership status (should be 'free' by default for new users)
+      const { data: membershipData } = await supabase
+        .from('Membership')
+        .select('membership')
+        .eq('id', data.user.id)
+        .single();
       
       if (profile) {
         set({
           authState: 'SIGNED_IN',
           user: mapProfileToUser(profile, data.user.email!),
           profile,
+          membership: membershipData?.membership || 'free'
         });
       }
     } catch (error) {
@@ -158,6 +225,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         authState: 'SIGNED_OUT',
         user: null,
         profile: null,
+        membership: null
       });
     } catch (error) {
       set({ error: (error as Error).message });

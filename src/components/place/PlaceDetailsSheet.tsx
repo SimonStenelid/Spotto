@@ -216,9 +216,11 @@ export function PlaceDetailsSheet({ place, isOpen, onClose }: PlaceDetailsSheetP
                         </div>
                       </div>
                       
-                      <p className="text-sm text-[#666666]">
-                        Based on {place.reviews?.length || 0} reviews
-                      </p>
+                      {place.reviews?.length > 0 && (
+                        <p className="text-sm text-[#666666]">
+                          Based on {place.reviews.length} reviews
+                        </p>
+                      )}
                     </div>
 
                     {/* Tips Card */}

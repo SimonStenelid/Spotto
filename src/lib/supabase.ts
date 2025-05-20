@@ -42,12 +42,62 @@ export const getCurrentUser = async () => {
 
 // Place data helpers
 export const getPlaces = async (moods?: string[]) => {
-  let query = supabase.from('places').select('*');
+  // First, get the current user
+  const { user: currentUser } = await getCurrentUser();
+  console.log('getPlaces - Current user:', currentUser?.id); // Debug log
   
+  if (!currentUser) {
+    console.log('getPlaces - No user, returning preview data');
+    // If no user is logged in, return preview data
+    let query = supabase.from('places_preview').select('*');
+    if (moods && moods.length > 0) {
+      query = query.containedBy('moods', moods);
+    }
+    const { data, error } = await query;
+    return { data, error };
+  }
+
+  // Check user's membership status
+  const { data: membership, error: membershipError } = await supabase
+    .from('Membership')
+    .select('membership')
+    .eq('id', currentUser.id)
+    .single();
+
+  console.log('getPlaces - Membership query:', {
+    userId: currentUser.id,
+    membership,
+    error: membershipError
+  });
+
+  if (membershipError) {
+    console.error('getPlaces - Membership error:', membershipError);
+    // If there's an error getting membership, default to preview
+    let query = supabase.from('places_preview').select('*');
+    if (moods && moods.length > 0) {
+      query = query.containedBy('moods', moods);
+    }
+    const { data, error } = await query;
+    return { data, error };
+  }
+
+  // If user has paid membership, query the full places table
+  if (membership?.membership === 'paid') {
+    console.log('getPlaces - User has paid membership, returning full data');
+    let query = supabase.from('places').select('*');
+    if (moods && moods.length > 0) {
+      query = query.containedBy('moods', moods);
+    }
+    const { data, error } = await query;
+    return { data, error };
+  }
+
+  // Otherwise, return preview data
+  console.log('getPlaces - User has free membership, returning preview data');
+  let query = supabase.from('places_preview').select('*');
   if (moods && moods.length > 0) {
     query = query.containedBy('moods', moods);
   }
-  
   const { data, error } = await query;
   return { data, error };
 };

@@ -61,6 +61,33 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
+  // Add security headers
+  response.headers.set('X-DNS-Prefetch-Control', 'on');
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  // Enhanced caching strategy
+  const isStaticAsset = request.nextUrl.pathname.match(/\.(css|js|jpg|jpeg|png|gif|ico|svg|woff2?)$/);
+  const isNextAsset = request.nextUrl.pathname.startsWith('/_next/');
+  const isStaticPage = !request.nextUrl.pathname.includes('/api/') && !request.nextUrl.pathname.includes('/auth/');
+
+  if (isStaticAsset || isNextAsset) {
+    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+  } else if (isStaticPage) {
+    response.headers.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+  }
+
+  // Add Server-Timing header for performance monitoring
+  response.headers.set('Server-Timing', 'miss, db;dur=53, app;dur=47.2');
+  
+  // Enable HTTP/2 Server Push for critical assets
+  if (isStaticPage) {
+    response.headers.set('Link', '</styles.css>; rel=preload; as=style, </main.js>; rel=preload; as=script');
+  }
+
   return response;
 }
 

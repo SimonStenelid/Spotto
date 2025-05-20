@@ -6,6 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import '../../styles/map.css';
 import { useMapStore } from '../../store/useMapStore';
 import { useNavigation } from '../ui/Navigation';
+import { useAuthStore } from '../../store/useAuthStore';
 import type { Place, Mood } from '../../types/index';
 import { cn } from '../../lib/utils';
 import { PlacePopup } from '../place/PlacePopup';
@@ -17,7 +18,8 @@ import {
   Landmark, 
   MapPin,
   ShoppingBag,
-  Ticket
+  Ticket,
+  Crown
 } from 'lucide-react';
 import { PlaceDetailsSheet } from '../place/PlaceDetailsSheet';
 
@@ -97,6 +99,7 @@ const Map: React.FC<MapProps> = ({ className }) => {
     selectPlace 
   } = useMapStore();
 
+  const { membership } = useAuthStore();
   const { isCollapsed } = useNavigation();
   
   // Safe resize function
@@ -373,6 +376,18 @@ const Map: React.FC<MapProps> = ({ className }) => {
   return (
     <div className={cn("relative w-full h-full", className)}>
       <div ref={mapContainer} className="w-full h-full" />
+
+      {/* Membership Banner */}
+      {membership === 'free' && (
+        <div className="absolute bottom-4 left-4 right-4 bg-black/80 text-white p-4 rounded-lg shadow-lg backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <Crown className="h-5 w-5 text-yellow-400" />
+            <p className="text-sm">
+              You're viewing a preview of Spotto. Upgrade to paid membership to see all places and features!
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Place Details Sheet */}
       {selectedPlace && (
