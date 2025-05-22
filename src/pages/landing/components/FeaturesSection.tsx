@@ -1,6 +1,7 @@
 'use client';
 
-import Image from 'next/image';
+import React from 'react';
+import { imageLoader } from '@/lib/image-loader';
 
 interface FeatureCardProps {
   iconSrc: string;
@@ -12,8 +13,8 @@ function FeatureCard({ iconSrc, title, description }: FeatureCardProps) {
   return (
     <div className="space-y-6">
       <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center">
-        <img 
-          src={iconSrc}
+        <img
+          src={imageLoader({ src: iconSrc })}
           alt={title}
           className="w-8 h-8 object-contain"
         />

@@ -1,56 +1,33 @@
-interface CredentialResponse {
+export interface CredentialResponse {
   credential: string;
   select_by: string;
+  client_id: string;
 }
 
-interface GsiButtonConfiguration {
-  type: 'standard' | 'icon';
-  theme?: 'outline' | 'filled_blue' | 'filled_black';
-  size?: 'large' | 'medium' | 'small';
-  text?: string;
-  shape?: 'rectangular' | 'pill' | 'circle' | 'square';
-  logo_alignment?: 'left' | 'center';
-  width?: string;
-  local?: string;
-}
-
-interface PromptMomentNotification {
-  isDisplayMoment: () => boolean;
-  isDisplayed: () => boolean;
-  isNotDisplayed: () => boolean;
-  getNotDisplayedReason: () => string;
-  isSkippedMoment: () => boolean;
-  isDismissedMoment: () => boolean;
-  getMomentType: () => string;
-}
-
-interface GoogleAccountsId {
+export interface GoogleAccountsId {
   initialize: (config: {
     client_id: string;
     callback: (response: CredentialResponse) => void;
-    nonce?: string;
-    context?: string;
-    prompt_parent_id?: string;
-    use_fedcm_for_prompt?: boolean;
+    auto_select?: boolean;
+    cancel_on_tap_outside?: boolean;
   }) => void;
-  prompt: (notification?: (notification: PromptMomentNotification) => void) => void;
+  prompt: () => void;
   renderButton: (
-    parent: HTMLElement,
-    config: GsiButtonConfiguration,
-    clickHandler?: () => void
+    element: HTMLElement,
+    config: {
+      type?: string;
+      theme?: string;
+      size?: string;
+      text?: string;
+      shape?: string;
+    }
   ) => void;
-  disableAutoSelect: () => void;
-  storeCredential: (credential: { id: string; password: string }, callback: () => void) => void;
-  cancel: () => void;
-  onGoogleLibraryLoad: () => void;
 }
 
-interface GoogleAccounts {
-  id: GoogleAccountsId;
-}
-
-interface Google {
-  accounts: GoogleAccounts;
+export interface Google {
+  accounts: {
+    id: GoogleAccountsId;
+  };
 }
 
 declare global {

@@ -1,6 +1,7 @@
 'use client';
 
-import Image from 'next/image';
+import React from 'react';
+import { imageLoader } from '@/lib/image-loader';
 
 // Import images directly
 import emma from '../../../public/images/reviews/emma.png';
@@ -20,12 +21,11 @@ function ReviewCard({ quote, name, role, image }: ReviewCardProps) {
       <p className="text-lg text-[#333333] mb-8">"{quote}"</p>
       <div className="flex items-center gap-4">
         <div className="relative w-12 h-12">
-          <Image
-            src={image}
+          <img
+            src={imageLoader({ src: image })}
             alt={`${name}'s profile picture`}
-            width={48}
-            height={48}
-            className="rounded-full object-cover"
+            className="w-full h-full object-cover"
+            loading="lazy"
           />
         </div>
         <div>

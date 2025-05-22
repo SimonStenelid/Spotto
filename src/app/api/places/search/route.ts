@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export async function GET(request: Request) {
@@ -7,7 +6,13 @@ export async function GET(request: Request) {
     const query = searchParams.get('q');
 
     if (!query) {
-      return NextResponse.json({ error: 'Query parameter is required' }, { status: 400 });
+      return new Response(
+        JSON.stringify({ error: 'Query parameter is required' }),
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     const { data, error } = await supabase
@@ -20,12 +25,21 @@ export async function GET(request: Request) {
       throw error;
     }
 
-    return NextResponse.json(data);
+    return new Response(
+      JSON.stringify(data),
+      { 
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   } catch (error) {
     console.error('Search error:', error);
-    return NextResponse.json(
-      { error: 'Failed to search places' },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: 'Failed to search places' }),
+      { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
     );
   }
 } 
