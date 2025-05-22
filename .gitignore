@@ -49,3 +49,6 @@ build
 
 # Vercel
 .vercel
+
+# Cursor
+.cursor/
