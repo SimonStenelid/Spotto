@@ -175,20 +175,52 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       set({ isLoading: true, error: null });
       
       const { data, error } = await signUpWithEmail(email, password);
-      if (error) throw error;
+      if (error) {
+        // If user is already registered, throw a specific error
+        if (error.message.includes('already registered')) {
+          throw new Error('User already registered');
+        }
+        throw error;
+      }
       
       if (!data.user) {
         throw new Error('No user data returned after sign up');
       }
 
-      // Get or create profile
+      // Create initial profile if it doesn't exist
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (!existingProfile) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email,
+            username: data.user.email?.split('@')[0], // Default username from email
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            bookmarks: [],
+            visited_places: []
+          });
+
+        if (profileError) throw profileError;
+      }
+
+      // Wait a short moment for the database trigger to create the membership record
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Now get the created profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', data.user.id)
         .single();
 
-      // Get membership status (should be 'free' by default for new users)
+      // Get membership status
       const { data: membershipData } = await supabase
         .from('Membership')
         .select('membership')
@@ -203,12 +235,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           membership: membershipData?.membership || 'free'
         });
       }
+
+      // Initialize the auth state since we're now signed in
+      await get().initialize();
     } catch (error) {
-      // If the error is about duplicate profile, we can ignore it as the profile was created by the trigger
-      if (error instanceof Error && !error.message.includes('duplicate key value')) {
-        set({ error: (error as Error).message });
-        throw error;
-      }
+      console.error('Signup error:', error);
+      set({ error: (error as Error).message });
+      throw error;
     } finally {
       set({ isLoading: false });
     }

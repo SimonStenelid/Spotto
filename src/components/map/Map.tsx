@@ -379,13 +379,13 @@ const Map: React.FC<MapProps> = ({ className }) => {
 
       {/* Membership Banner */}
       {membership === 'free' && (
-        <div className="absolute bottom-4 left-4 right-4 bg-black/80 text-white p-4 rounded-lg shadow-lg backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <Crown className="h-5 w-5 text-yellow-400" />
-            <p className="text-sm">
-              You're viewing a preview of Spotto. Upgrade to paid membership to see all places and features!
-            </p>
-          </div>
+        <div 
+          className="absolute top-20 left-1/2 -translate-x-1/2 z-[60] bg-zinc-900/95 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 cursor-pointer hover:bg-zinc-800/95 transition-all duration-200 border border-zinc-800"
+          onClick={() => window.location.href = '/pricing'}
+        >
+          <span className="text-[13px] font-medium text-zinc-200">
+            Preview user - upgrade for full access of Stockholm
+          </span>
         </div>
       )}
 

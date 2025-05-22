@@ -1,32 +1,34 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FcGoogle } from "react-icons/fc";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { supabase } from '../../lib/supabase';
+import { toast } from 'sonner';
 import { useAuthStore } from '../../store/useAuthStore';
-import { createClient } from '@supabase/supabase-js';
-import GoogleOneTap from './GoogleOneTap';
+import { AuthTabs } from './AuthTabs';
 
-const SignupForm: React.FC = () => {
+interface SignupFormProps {
+  redirectTo?: string;
+}
+
+interface SignupFormData {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export default function SignupForm({ redirectTo = '/app' }: SignupFormProps) {
   const navigate = useNavigate();
-  const { signUp, error, isLoading } = useAuthStore();
-  const supabase = createClient(
-    import.meta.env.VITE_SUPABASE_URL!,
-    import.meta.env.VITE_SUPABASE_ANON_KEY!
-  );
-  
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await signUp(email, password);
-      navigate('/');
-    } catch (error) {
-      // Error is handled by the store
-      console.error('Signup error:', error);
-    }
+  const { signUp, signIn, isLoading } = useAuthStore();
+  const [formData, setFormData] = useState<SignupFormData>({
+    username: '',
+    email: '',
+    password: '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleGoogleSignIn = async () => {
@@ -38,99 +40,145 @@ const SignupForm: React.FC = () => {
             access_type: 'offline',
             prompt: 'consent',
           },
+          redirectTo: `${window.location.origin}/auth/callback?redirectTo=${redirectTo}`,
         },
       });
-      
+
       if (error) throw error;
-      if (data.url) {
+      
+      if (data?.url) {
         window.location.href = data.url;
       }
     } catch (error) {
       console.error('Error signing in with Google:', error);
+      toast.error('Error signing in with Google');
     }
   };
-  
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      await signUp(formData.email, formData.password);
+      await signIn(formData.email, formData.password);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            username: formData.username,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (profileError) throw profileError;
+      }
+
+      toast.success('Account created successfully!');
+      navigate('/app');
+      
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('already registered')) {
+        toast.error('This email is already registered. Please try logging in instead.');
+      } else {
+        toast.error('Error during signup: ' + (error instanceof Error ? error.message : 'An error occurred'));
+      }
+    }
+  };
+
   return (
-    <div className="w-full max-w-[400px] mx-auto p-6">
-      <GoogleOneTap />
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2">Welcome to Spotto</h1>
-        <p className="text-muted-foreground">Sign in or create an account</p>
+    <div className="w-full space-y-6 sm:space-y-7">
+      <div className="text-center">
+        <h1 className="text-2xl sm:text-[32px] font-bold text-[#0f0f0f] mb-1.5 sm:mb-2">Welcome to Spotto</h1>
+        <p className="text-sm sm:text-base text-[#333333]">Sign in or create an account</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="email">
+      <AuthTabs />
+
+      <button
+        type="button"
+        onClick={handleGoogleSignIn}
+        className="w-full flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-[#e5e5e5] rounded-lg sm:rounded-xl hover:bg-gray-50 transition-colors"
+      >
+        <img src="/icons/google.svg" alt="Google" className="w-4 sm:w-5 h-4 sm:h-5" />
+        <span className="text-sm sm:text-base font-medium text-[#333333]">Continue with Google</span>
+      </button>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-[#e5e5e5]"></div>
+        </div>
+        <div className="relative flex justify-center">
+          <span className="px-2 bg-white text-xs sm:text-sm text-[#666666]">OR</span>
+        </div>
+      </div>
+
+      <form onSubmit={handleSignup} className="space-y-3 sm:space-y-4">
+        <div>
+          <label htmlFor="username" className="block text-xs sm:text-sm font-medium text-[#333333] mb-1 sm:mb-1.5">
+            Username
+          </label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            required
+            value={formData.username}
+            onChange={handleChange}
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-[#e5e5e5] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-black text-sm sm:text-base"
+            placeholder="Enter your username"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-[#333333] mb-1 sm:mb-1.5">
             Email
           </label>
-          <Input
+          <input
             id="email"
+            name="email"
             type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
             required
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-[#e5e5e5] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-black text-sm sm:text-base"
+            placeholder="Enter your email"
           />
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="password">
+        <div>
+          <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-[#333333] mb-1 sm:mb-1.5">
             Password
           </label>
-          <Input
+          <input
             id="password"
+            name="password"
             type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={6}
+            value={formData.password}
+            onChange={handleChange}
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-[#e5e5e5] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-black text-sm sm:text-base"
+            placeholder="••••••••"
           />
-          <p className="text-sm text-muted-foreground">Password must be at least 6 characters</p>
         </div>
 
-        <Button 
-          type="submit" 
-          className="w-full"
+        <button
+          type="submit"
           disabled={isLoading}
+          className="w-full bg-[#0f0f0f] text-white py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
         >
-          {isLoading ? 'Creating account...' : 'Sign Up'}
-        </Button>
+          {isLoading ? 'Creating account...' : 'Create account'}
+        </button>
       </form>
 
-      <div className="mt-6">
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="bg-background px-2 text-muted-foreground">OR</span>
-          </div>
-        </div>
-
-        <div className="mt-6 space-y-3">
-          <Button 
-            variant="outline" 
-            className="w-full" 
-            type="button"
-            onClick={handleGoogleSignIn}
-          >
-            <FcGoogle className="mr-2 h-4 w-4" />
-            Continue with Google
-          </Button>
-        </div>
-      </div>
-
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        Already have an account?{" "}
-        <Link to="/login">
-          <Button variant="link" className="px-0">
-            Log in
-          </Button>
+      <p className="text-xs sm:text-sm text-center text-[#666666]">
+        Already have an account?{' '}
+        <Link to="/app/login" className="font-medium text-[#0f0f0f] hover:underline">
+          Log in
         </Link>
       </p>
     </div>
   );
-};
-
-export default SignupForm;
+}

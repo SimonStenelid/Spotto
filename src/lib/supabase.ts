@@ -23,11 +23,27 @@ export const signInWithEmail = async (email: string, password: string) => {
 };
 
 export const signUpWithEmail = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signUp({
+  // First sign up the user
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
   });
-  return { data, error };
+
+  if (signUpError) {
+    return { data: null, error: signUpError };
+  }
+
+  // If signup successful, automatically sign in
+  if (signUpData.user) {
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    return { data: signInData, error: signInError };
+  }
+
+  return { data: signUpData, error: null };
 };
 
 export const signOut = async () => {
