@@ -1,0 +1,13 @@
+# Environment Variables Template for Stripe Integration
+# Copy to .env.local and fill in your actual values
+
+# Stripe Configuration
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+VITE_STRIPE_PRICE_ID=price_1RRh8gCM7Q3fmVNp5ws7LsXn
+
+# Supabase Configuration
+VITE_SUPABASE_URL=https://jjkdamyrulnpcwcfvegn.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impqa2RhbXlydWxucGN3Y2Z2ZWduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxODQ5ODcsImV4cCI6MjA2MTc2MDk4N30.kZiXjkZ9GNqiUjbVNZImO2mR5aq-VIER0hJ31amVmdA
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key 

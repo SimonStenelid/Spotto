@@ -17,6 +17,7 @@ interface AuthStore {
   updateProfile: (updates: Partial<User>) => Promise<void>;
   updateUser: (user: User) => void;
   updateUserBookmarks: (bookmarks: string[]) => void;
+  upgradeToPaid: () => Promise<void>;
 }
 
 function mapProfileToUser(profile: any, email: string): User {
@@ -322,5 +323,22 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         bookmarks,
       },
     });
+  },
+
+  upgradeToPaid: async () => {
+    const { user } = get();
+    if (!user) return;
+
+    try {
+      // Update local state immediately for better UX
+      set({ membership: 'paid' });
+      
+      // Verify with backend by re-initializing
+      await get().initialize();
+    } catch (error) {
+      console.error('Error upgrading membership:', error);
+      // Revert local state if backend fails
+      set({ membership: 'free' });
+    }
   },
 }));

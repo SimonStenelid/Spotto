@@ -22,6 +22,7 @@ import {
   Crown
 } from 'lucide-react';
 import { PlaceDetailsSheet } from '../place/PlaceDetailsSheet';
+import { PaymentModal } from '../payment/PaymentModal';
 
 // Set Mapbox access token
 mapboxgl.accessToken = 'pk.eyJ1Ijoic2ltb25zdGVuZWxpZCIsImEiOiJjbWE2cmhxcHkwc2hvMmlzNm9xdGloOTF3In0.DO89L9nl0vo1PVzv6M_20w';
@@ -91,6 +92,7 @@ const Map: React.FC<MapProps> = ({ className }) => {
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [isPlaceDetailsOpen, setIsPlaceDetailsOpen] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   const { 
     mapSettings, 
@@ -381,7 +383,7 @@ const Map: React.FC<MapProps> = ({ className }) => {
       {membership === 'free' && (
         <div 
           className="absolute top-20 left-1/2 -translate-x-1/2 z-[60] bg-zinc-900/95 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 cursor-pointer hover:bg-zinc-800/95 transition-all duration-200 border border-zinc-800"
-          onClick={() => window.location.href = '/pricing'}
+          onClick={() => setShowPaymentModal(true)}
         >
           <span className="text-[13px] font-medium text-zinc-200">
             Preview user - upgrade for full access of Stockholm
@@ -400,6 +402,12 @@ const Map: React.FC<MapProps> = ({ className }) => {
           }}
         />
       )}
+
+      {/* Payment Modal */}
+      <PaymentModal 
+        isOpen={showPaymentModal} 
+        onClose={() => setShowPaymentModal(false)} 
+      />
     </div>
   );
 };

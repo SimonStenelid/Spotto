@@ -1,3 +1,6 @@
+import React, { useState } from 'react'
+import { PaymentModal } from '../../../components/payment/PaymentModal'
+
 interface PricingTierProps {
   name: string;
   price: string;
@@ -5,9 +8,10 @@ interface PricingTierProps {
   features: string[];
   isPopular?: boolean;
   buttonText: string;
+  onButtonClick?: () => void;
 }
 
-function PricingTier({ name, price, description, features, isPopular, buttonText }: PricingTierProps) {
+function PricingTier({ name, price, description, features, isPopular, buttonText, onButtonClick }: PricingTierProps) {
   return (
     <div className={`relative rounded-3xl p-8 ${isPopular ? 'bg-[#0f0f0f] text-white' : 'bg-white border border-[#e5e5e5] text-black'}`}>
       {isPopular && (
@@ -60,6 +64,7 @@ function PricingTier({ name, price, description, features, isPopular, buttonText
 
       {/* CTA Button */}
       <button
+        onClick={onButtonClick}
         className={`w-full mt-8 py-4 rounded-full font-semibold text-base transition-colors
           ${isPopular 
             ? 'bg-white text-black hover:bg-white/90' 
@@ -73,58 +78,84 @@ function PricingTier({ name, price, description, features, isPopular, buttonText
 }
 
 export function PricingSection({ id }: { id?: string }) {
-  return (
-    <section id={id} className="w-full py-20 px-4 sm:px-6 lg:px-20 bg-white">
-      <div className="max-w-[1240px] mx-auto">
-        {/* Section Header */}
-        <div className="max-w-[800px] mx-auto text-center space-y-6 mb-20">
-          <span className="text-[#5046e5] font-medium text-base">PRICING</span>
-          <h2 className="text-5xl font-bold text-black">Simple, transparent pricing</h2>
-          <p className="text-lg text-gray-700">
-            Pay once for unlimited access—everything now and everything we add in the future.
-          </p>
-        </div>
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
 
-        {/* Pricing Tiers */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <PricingTier
-            name="Preview"
-            price="0 KR"
-            description="Test our app, see our preview."
-            features={[
-              'Basic map features',
-              'Limited location details',
-              'Look around, see if you like it'
-            ]}
-            buttonText="Get Started"
-          />
-          <PricingTier
-            name="Full Access"
-            price="89 KR"
-            description="Unlock the full Stockholm experience."
-            features={[
-              'All features',
-              'Ad-free experience',
-              'Detailed location information',
-              'Personalized recommendations',
-              'Coming soon - Mobile App!'
-            ]}
-            isPopular
-            buttonText="Subscribe Now"
-          />
-          <PricingTier
-            name="Coming Soon"
-            price=""
-            description="We're working on more ways to explore. Stay tuned for new passes and features."
-            features={[
-              'Expanding our locations',
-              'Custom travel planning',
-              'Any ideas for us? Feel free to share them'
-            ]}
-            buttonText="Learn More"
-          />
+  const handleGetStarted = () => {
+    window.location.href = '/app'
+  }
+
+  const handleSubscribeNow = () => {
+    setShowPaymentModal(true)
+  }
+
+  const handleLearnMore = () => {
+    // Could open a contact form or redirect somewhere
+    console.log('Learn more clicked')
+  }
+
+  return (
+    <>
+      <section id={id} className="w-full py-20 px-4 sm:px-6 lg:px-20 bg-white">
+        <div className="max-w-[1240px] mx-auto">
+          {/* Section Header */}
+          <div className="max-w-[800px] mx-auto text-center space-y-6 mb-20">
+            <span className="text-[#5046e5] font-medium text-base">PRICING</span>
+            <h2 className="text-5xl font-bold text-black">Simple, transparent pricing</h2>
+            <p className="text-lg text-gray-700">
+              Pay once for unlimited access—everything now and everything we add in the future.
+            </p>
+          </div>
+
+          {/* Pricing Tiers */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <PricingTier
+              name="Preview"
+              price="0 KR"
+              description="Test our app, see our preview."
+              features={[
+                'Basic map features',
+                'Limited location details',
+                'Look around, see if you like it'
+              ]}
+              buttonText="Get Started"
+              onButtonClick={handleGetStarted}
+            />
+            <PricingTier
+              name="Full Access"
+              price="89 KR"
+              description="Unlock the full Stockholm experience."
+              features={[
+                'All features',
+                'Ad-free experience',
+                'Detailed location information',
+                'Personalized recommendations',
+                'Coming soon - Mobile App!'
+              ]}
+              isPopular
+              buttonText="Subscribe Now"
+              onButtonClick={handleSubscribeNow}
+            />
+            <PricingTier
+              name="Coming Soon"
+              price=""
+              description="We're working on more ways to explore. Stay tuned for new passes and features."
+              features={[
+                'Expanding our locations',
+                'Custom travel planning',
+                'Any ideas for us? Feel free to share them'
+              ]}
+              buttonText="Learn More"
+              onButtonClick={handleLearnMore}
+            />
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+      
+      {/* Payment Modal */}
+      <PaymentModal 
+        isOpen={showPaymentModal} 
+        onClose={() => setShowPaymentModal(false)} 
+      />
+    </>
   );
 } 

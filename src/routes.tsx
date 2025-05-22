@@ -3,6 +3,8 @@ import App from './App';
 import LandingPage from './pages/landing/LandingPage';
 import Documentation from './pages/landing/Documentation';
 import { Blog } from './pages/landing/Blog';
+import { PaymentSuccess } from './pages/payment/PaymentSuccess';
+import { PaymentCanceled } from './pages/payment/PaymentCanceled';
 
 export const router = createBrowserRouter([
   {
@@ -20,6 +22,14 @@ export const router = createBrowserRouter([
   {
     path: '/app/*',
     element: <App />
+  },
+  {
+    path: '/payment/success',
+    element: <PaymentSuccess />
+  },
+  {
+    path: '/payment/canceled',
+    element: <PaymentCanceled />
   },
   {
     path: '*',
