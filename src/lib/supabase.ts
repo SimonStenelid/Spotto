@@ -1,10 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
-import { User } from '../types';
+import type { User } from '../types';
 
-// Supabase configuration
-// These environment variables will need to be set after connecting to Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
@@ -23,27 +21,11 @@ export const signInWithEmail = async (email: string, password: string) => {
 };
 
 export const signUpWithEmail = async (email: string, password: string) => {
-  // First sign up the user
-  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
   });
-
-  if (signUpError) {
-    return { data: null, error: signUpError };
-  }
-
-  // If signup successful, automatically sign in
-  if (signUpData.user) {
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    return { data: signInData, error: signInError };
-  }
-
-  return { data: signUpData, error: null };
+  return { data, error };
 };
 
 export const signOut = async () => {
@@ -52,8 +34,8 @@ export const signOut = async () => {
 };
 
 export const getCurrentUser = async () => {
-  const { data, error } = await supabase.auth.getUser();
-  return { user: data.user, error };
+  const { data: { user }, error } = await supabase.auth.getUser();
+  return { user, error };
 };
 
 // Place data helpers
