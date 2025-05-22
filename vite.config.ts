@@ -34,42 +34,53 @@ export default defineConfig({
     }
   },
   build: {
-    sourcemap: true,
+    sourcemap: process.env.NODE_ENV !== 'production',
     commonjsOptions: {
       transformMixedEsModules: true,
     },
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          // Bundle React and ReactDOM together
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
-            return 'react-vendor';
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'radix-vendor': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-avatar',
+            '@radix-ui/react-checkbox',
+            '@radix-ui/react-label',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-scroll-area',
+            '@radix-ui/react-separator',
+            '@radix-ui/react-slot',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast'
+          ],
+          'ui-vendor': [
+            'framer-motion',
+            '@heroicons/react',
+            'lucide-react'
+          ]
+        },
+        assetFileNames: (assetInfo) => {
+          if (!assetInfo.name) return 'assets/[name]-[hash][extname]';
+          const extType = assetInfo.name.split('.').pop() || '';
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
+            return `assets/img/[name]-[hash][extname]`;
           }
-          // Bundle Radix UI components together
-          if (id.includes('node_modules/@radix-ui/')) {
-            return 'radix-vendor';
-          }
-          // Bundle other UI related packages
-          if (id.includes('node_modules/framer-motion/') || 
-              id.includes('node_modules/@heroicons/') ||
-              id.includes('node_modules/lucide-react/')) {
-            return 'ui-vendor';
-          }
-          // Bundle other common dependencies
-          if (id.includes('node_modules/')) {
-            return 'vendor';
-          }
-        }
+          return `assets/${extType}/[name]-[hash][extname]`;
+        },
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js'
       }
     },
     target: 'esnext',
     minify: 'esbuild',
     cssMinify: true,
     reportCompressedSize: false,
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 1000,
+    assetsInlineLimit: 4096
   },
   css: {
-    devSourcemap: true,
+    devSourcemap: false,
     modules: {
       localsConvention: 'camelCase'
     }

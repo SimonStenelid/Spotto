@@ -8,9 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Dependencies
-/node_modules
-/.pnp
-.pnp.js
+node_modules
 dist
 dist-ssr
 *.local
@@ -31,31 +29,23 @@ dist-ssr
 .env.*
 !.env.example
 
-# Build output
-/build
-.next
-/out/
+# Testing
+coverage
 
-# Cache
+# Production build
+build
+
+# Temporary files
+*.tmp
+*.temp
 .cache
-.npm
-.eslintcache
+.temp
 
-# Coverage
-/coverage
-.nyc_output
+# Vite
+.vite
 
-# Misc
-*.pem
-.DS_Store*
-Thumbs.db
-
-# Local env files
-.env*.local
+# TypeScript
+*.tsbuildinfo
 
 # Vercel
 .vercel
-
-# Typescript
-*.tsbuildinfo
-next-env.d.ts
