@@ -6,6 +6,8 @@ import { Blog } from './pages/landing/Blog';
 import { PaymentSuccess } from './pages/payment/PaymentSuccess';
 import { PaymentCanceled } from './pages/payment/PaymentCanceled';
 import AuthCallback from './pages/auth/AuthCallback';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 
 export const router = createBrowserRouter([
   {
@@ -19,6 +21,14 @@ export const router = createBrowserRouter([
   {
     path: '/blog',
     element: <Blog />
+  },
+  {
+    path: '/privacy-policy',
+    element: <PrivacyPolicy />
+  },
+  {
+    path: '/terms-of-service',
+    element: <TermsOfService />
   },
   {
     path: '/auth/callback',

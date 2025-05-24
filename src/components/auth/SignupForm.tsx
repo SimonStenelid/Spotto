@@ -33,10 +33,15 @@ export default function SignupForm({ redirectTo = '/app' }: SignupFormProps) {
 
   const handleGoogleSignIn = async () => {
     try {
-      // Use production URL for deployment, fallback to current origin for development
-      const baseUrl = import.meta.env.PROD 
+      // Always use production URL for deployment
+      const isProduction = window.location.hostname === 'spotto-iota.vercel.app';
+      const baseUrl = isProduction 
         ? 'https://spotto-iota.vercel.app' 
         : window.location.origin;
+      
+      console.log('Google OAuth - Base URL:', baseUrl);
+      console.log('Google OAuth - Is Production:', isProduction);
+      console.log('Google OAuth - Current hostname:', window.location.hostname);
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -45,13 +50,17 @@ export default function SignupForm({ redirectTo = '/app' }: SignupFormProps) {
             access_type: 'offline',
             prompt: 'consent',
           },
-          redirectTo: `${baseUrl}/auth/callback?redirectTo=${redirectTo}`,
+          redirectTo: `${baseUrl}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Google OAuth error:', error);
+        throw error;
+      }
       
       if (data?.url) {
+        console.log('Redirecting to Google OAuth URL:', data.url);
         window.location.href = data.url;
       }
     } catch (error) {
@@ -96,6 +105,9 @@ export default function SignupForm({ redirectTo = '/app' }: SignupFormProps) {
   return (
     <div className="w-full space-y-6 sm:space-y-7">
       <div className="text-center">
+        <div className="flex items-center justify-center mb-4">
+          <img src="/favicon.svg" alt="Spotto" className="w-12 h-12 sm:w-16 sm:h-16" />
+        </div>
         <h1 className="text-2xl sm:text-[32px] font-bold text-[#0f0f0f] mb-1.5 sm:mb-2">Welcome to Spotto</h1>
         <p className="text-sm sm:text-base text-[#333333]">Sign in or create an account</p>
       </div>

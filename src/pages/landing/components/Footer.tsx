@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export function Footer() {
   return (
     <footer className="w-full py-16 px-4 sm:px-6 lg:px-20 bg-white">
@@ -8,9 +10,7 @@ export function Footer() {
           <div className="lg:col-span-4">
             {/* Logo */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="bg-[#0f0f0f] rounded-lg w-9 h-9 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">S</span>
-              </div>
+              <img src="/favicon.svg" alt="Spotto" className="w-9 h-9" />
               <span className="text-black font-semibold text-xl">Spotto</span>
             </div>
             <p className="text-[#666666] text-sm leading-[21px] max-w-[360px]">
@@ -20,7 +20,7 @@ export function Footer() {
 
           {/* Footer Links */}
           <div className="lg:col-span-8">
-            <div className="grid grid-cols-1 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
               {/* Product Links */}
               <div className="space-y-4">
                 <h4 className="text-base font-semibold text-black">Product</h4>
@@ -29,15 +29,30 @@ export function Footer() {
                   <a href="#pricing" className="block text-sm text-[#666666] hover:text-gray-900">Pricing</a>
                 </div>
               </div>
+
+              {/* Legal Links */}
+              <div className="space-y-4">
+                <h4 className="text-base font-semibold text-black">Legal</h4>
+                <div className="space-y-3">
+                  <Link to="/privacy-policy" className="block text-sm text-[#666666] hover:text-gray-900">Privacy Policy</Link>
+                  <Link to="/terms-of-service" className="block text-sm text-[#666666] hover:text-gray-900">Terms of Service</Link>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Copyright and Social */}
+        {/* Copyright and Legal Links */}
         <div className="flex flex-col sm:flex-row justify-between items-center pt-8 border-t border-[#e5e5e5]">
-          <p className="text-sm text-[#666666] mb-4 sm:mb-0">
-            © 2025 Spotto. All rights reserved.
-          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-4 mb-4 sm:mb-0">
+            <p className="text-sm text-[#666666]">
+              © 2025 Spotto. All rights reserved.
+            </p>
+            <div className="flex gap-4 text-sm">
+              <Link to="/privacy-policy" className="text-[#666666] hover:text-gray-900">Privacy</Link>
+              <Link to="/terms-of-service" className="text-[#666666] hover:text-gray-900">Terms</Link>
+            </div>
+          </div>
           
           {/* Social Links */}
           <div className="flex gap-4">
