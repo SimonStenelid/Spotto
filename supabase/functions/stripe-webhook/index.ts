@@ -66,7 +66,7 @@ serve(async (request) => {
   try {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object
-        const userId = session.metadata?.userId
+      const userId = session.metadata?.userId
       const userEmail = session.metadata?.userEmail || session.customer_email
 
       console.log('Processing payment completion:', {
@@ -103,37 +103,42 @@ serve(async (request) => {
       }
 
       // Record the payment
-      const { error: paymentError } = await supabaseAdmin
-          .from('payments')
-          .insert({
+      const { data: paymentData, error: paymentError } = await supabaseAdmin
+        .from('payments')
+        .insert({
           user_id: targetUserId,
           stripe_session_id: session.id,
           stripe_payment_intent_id: session.payment_intent,
           amount: session.amount_total,
           currency: session.currency,
-          status: 'completed',
+          status: 'succeeded',
           created_at: new Date().toISOString()
         })
+        .select()
+        .single()
 
-        if (paymentError) {
-          console.error('Error recording payment:', paymentError)
+      if (paymentError) {
+        console.error('Error recording payment:', paymentError)
         return new Response('Error recording payment', { status: 500 })
       }
 
-      // Update or create membership
+      console.log('Payment recorded successfully:', paymentData)
+
+      // Update or create membership - use the correct column names
       const { error: membershipError } = await supabaseAdmin
-          .from('Membership')
-          .upsert({
-          user_id: targetUserId,
-          is_active: true,
-          activated_at: new Date().toISOString(),
+        .from('Membership')
+        .upsert({
+          id: targetUserId, // The id column references auth.users.id
+          membership: 'paid', // Update the membership type to 'paid'
+          payment_id: paymentData.id, // Link to the payment record
+          email: userEmail,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'user_id'
+          onConflict: 'id' // Use 'id' instead of 'user_id'
         })
 
-        if (membershipError) {
-          console.error('Error updating membership:', membershipError)
+      if (membershipError) {
+        console.error('Error updating membership:', membershipError)
         return new Response('Error updating membership', { status: 500 })
       }
 
