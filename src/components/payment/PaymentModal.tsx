@@ -21,7 +21,7 @@ export function PaymentModal({ isOpen, onClose }: PaymentModalProps) {
 
     setIsLoading(true)
     try {
-      const { sessionId } = await createCheckoutSession(user.id)
+      const { sessionId } = await createCheckoutSession(user.id, user.email || undefined)
       
       const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
       if (!stripe) throw new Error('Stripe failed to load')
@@ -49,7 +49,7 @@ export function PaymentModal({ isOpen, onClose }: PaymentModalProps) {
             <p className="text-gray-600 mb-4">
               One-time payment • Lifetime access • All current and future locations
             </p>
-            <div className="text-3xl font-bold text-purple-600 mb-4">89 KR</div>
+            <div className="text-3xl font-bold text-purple-600 mb-4">59 KR</div>
           </div>
           
           <div className="space-y-2 text-sm text-gray-600">

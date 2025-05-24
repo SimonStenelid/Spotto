@@ -66,7 +66,7 @@ serve(async (request) => {
   try {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object
-      const userId = session.metadata?.userId
+        const userId = session.metadata?.userId
       const userEmail = session.metadata?.userEmail || session.customer_email
 
       console.log('Processing payment completion:', {
@@ -104,8 +104,8 @@ serve(async (request) => {
 
       // Record the payment
       const { error: paymentError } = await supabaseAdmin
-        .from('payments')
-        .insert({
+          .from('payments')
+          .insert({
           user_id: targetUserId,
           stripe_session_id: session.id,
           stripe_payment_intent_id: session.payment_intent,
@@ -115,15 +115,15 @@ serve(async (request) => {
           created_at: new Date().toISOString()
         })
 
-      if (paymentError) {
-        console.error('Error recording payment:', paymentError)
+        if (paymentError) {
+          console.error('Error recording payment:', paymentError)
         return new Response('Error recording payment', { status: 500 })
       }
 
       // Update or create membership
       const { error: membershipError } = await supabaseAdmin
-        .from('Membership')
-        .upsert({
+          .from('Membership')
+          .upsert({
           user_id: targetUserId,
           is_active: true,
           activated_at: new Date().toISOString(),
@@ -132,8 +132,8 @@ serve(async (request) => {
           onConflict: 'user_id'
         })
 
-      if (membershipError) {
-        console.error('Error updating membership:', membershipError)
+        if (membershipError) {
+          console.error('Error updating membership:', membershipError)
         return new Response('Error updating membership', { status: 500 })
       }
 

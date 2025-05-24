@@ -1,7 +1,14 @@
 import { supabase } from '../../../lib/supabase'
 
-export async function createCheckoutSession(userId: string) {
+export async function createCheckoutSession(userId: string, userEmail?: string) {
   try {
+    // Get the current user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.access_token) {
+      throw new Error('User not authenticated')
+    }
+
     // Get the Supabase project URL from environment
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
     if (!supabaseUrl) {
@@ -12,9 +19,12 @@ export async function createCheckoutSession(userId: string) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ 
+        userId,
+        userEmail: userEmail || session.user?.email 
+      }),
     })
 
     if (!response.ok) {

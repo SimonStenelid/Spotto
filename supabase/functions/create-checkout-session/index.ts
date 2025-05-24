@@ -80,7 +80,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ sessionId: session.id }),
-      {
+      { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       }
@@ -89,7 +89,7 @@ serve(async (req) => {
     console.error('Error creating checkout session:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
+      { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       }
