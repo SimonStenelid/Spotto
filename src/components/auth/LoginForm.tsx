@@ -31,6 +31,11 @@ export default function LoginForm({ redirectTo = '/app' }: LoginFormProps) {
 
   const handleGoogleSignIn = async () => {
     try {
+      // Use production URL for deployment, fallback to current origin for development
+      const baseUrl = import.meta.env.PROD 
+        ? 'https://spotto-iota.vercel.app' 
+        : window.location.origin;
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -38,7 +43,7 @@ export default function LoginForm({ redirectTo = '/app' }: LoginFormProps) {
             access_type: 'offline',
             prompt: 'consent',
           },
-          redirectTo: `${window.location.origin}/auth/callback?redirectTo=${redirectTo}`,
+          redirectTo: `${baseUrl}/auth/callback?redirectTo=${redirectTo}`,
         },
       });
 

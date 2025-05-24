@@ -59,7 +59,7 @@ const countries = [
 ] as const;
 
 const UserProfile: React.FC = () => {
-  const { user, signOut, updateUser } = useAuthStore();
+  const { user, signOut, updateUser, membership } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editedUser, setEditedUser] = useState<User | null>(user);
   const [open, setOpen] = useState(false);
@@ -196,7 +196,16 @@ const UserProfile: React.FC = () => {
       <Card className="bg-white shadow-sm w-full">
         <CardHeader className="pb-0">
           <div className="flex items-center justify-between flex-col gap-4 sm:flex-row sm:gap-0">
-            <h1 className="text-2xl font-semibold text-center sm:text-left w-full sm:w-auto">Account Manager</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold text-center sm:text-left">Account Manager</h1>
+              <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                membership === 'paid' 
+                  ? 'bg-green-100 text-green-800 border border-green-200' 
+                  : 'bg-orange-100 text-orange-800 border border-orange-200'
+              }`}>
+                {membership === 'paid' ? 'Member' : 'Preview'}
+              </div>
+            </div>
             {!isEditing ? (
               <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="w-full sm:w-auto">
                 <Pencil className="h-4 w-4 mr-2" />

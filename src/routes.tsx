@@ -5,6 +5,7 @@ import Documentation from './pages/landing/Documentation';
 import { Blog } from './pages/landing/Blog';
 import { PaymentSuccess } from './pages/payment/PaymentSuccess';
 import { PaymentCanceled } from './pages/payment/PaymentCanceled';
+import AuthCallback from './pages/auth/AuthCallback';
 
 export const router = createBrowserRouter([
   {
@@ -18,6 +19,10 @@ export const router = createBrowserRouter([
   {
     path: '/blog',
     element: <Blog />
+  },
+  {
+    path: '/auth/callback',
+    element: <AuthCallback />
   },
   {
     path: '/app/*',

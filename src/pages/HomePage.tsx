@@ -6,7 +6,6 @@ import { useMapStore } from '../store/useMapStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { cn } from '@/lib/utils';
 import { SearchField } from '../components/ui/SearchField';
-import { EnvironmentChecker } from '../components/payment/EnvironmentChecker';
 
 const HomePage: React.FC = () => {
   const { 
@@ -76,11 +75,6 @@ const HomePage: React.FC = () => {
             <span className="text-sm font-medium">Tap markers to view details</span>
           </motion.div>
         </div>
-      )}
-
-      {/* Environment Checker - Show on Vercel deployments */}
-      {(import.meta.env.MODE === 'development' || window.location.hostname.includes('vercel')) && (
-        <EnvironmentChecker />
       )}
     </div>
   );

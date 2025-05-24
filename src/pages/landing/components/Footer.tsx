@@ -20,33 +20,13 @@ export function Footer() {
 
           {/* Footer Links */}
           <div className="lg:col-span-8">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 gap-8">
               {/* Product Links */}
               <div className="space-y-4">
                 <h4 className="text-base font-semibold text-black">Product</h4>
                 <div className="space-y-3">
                   <a href="#features" className="block text-sm text-[#666666] hover:text-gray-900">Features</a>
                   <a href="#pricing" className="block text-sm text-[#666666] hover:text-gray-900">Pricing</a>
-                </div>
-              </div>
-
-              {/* Company Links */}
-              <div className="space-y-4">
-                <h4 className="text-base font-semibold text-black">Company</h4>
-                <div className="space-y-3">
-                  <a href="#about" className="block text-sm text-[#666666] hover:text-gray-900">About</a>
-                  <a href="#blog" className="block text-sm text-[#666666] hover:text-gray-900">Blog</a>
-                  <a href="#careers" className="block text-sm text-[#666666] hover:text-gray-900">Careers</a>
-                </div>
-              </div>
-
-              {/* Support Links */}
-              <div className="space-y-4">
-                <h4 className="text-base font-semibold text-black">Support</h4>
-                <div className="space-y-3">
-                  <a href="#help" className="block text-sm text-[#666666] hover:text-gray-900">Help Center</a>
-                  <a href="#contact" className="block text-sm text-[#666666] hover:text-gray-900">Contact</a>
-                  <a href="#privacy" className="block text-sm text-[#666666] hover:text-gray-900">Privacy</a>
                 </div>
               </div>
             </div>
