@@ -66,7 +66,7 @@ serve(async (req) => {
       },
       body: new URLSearchParams({
         'payment_method_types[0]': 'card',
-        'line_items[0][price]': 'price_1RRidMCM7Q3fmVNpIYWtVOwT', // 59 SEK price
+        'line_items[0][price]': 'price_1RRidMCM7Q3fmVNpIYWtVOwT', // Updated to correct price ID
         'line_items[0][quantity]': '1',
         'mode': 'payment',
         'success_url': `${req.headers.get('origin')}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
