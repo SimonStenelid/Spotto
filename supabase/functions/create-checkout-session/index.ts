@@ -13,11 +13,22 @@ serve(async (req) => {
   }
 
   try {
-    // Create Supabase client
+    // Get the authorization header from the request
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('No authorization header')
+    }
+
+    // Create Supabase client with the user's token
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
+        global: {
+          headers: {
+            Authorization: authHeader,
+          },
+        },
         auth: {
           autoRefreshToken: false,
           persistSession: false
@@ -25,30 +36,26 @@ serve(async (req) => {
       }
     )
 
-    // Get the authorization header from the request
-    const authHeader = req.headers.get('Authorization')!
-    const token = authHeader.replace('Bearer ', '')
-    
-    // Set the auth token for this request
-    supabaseClient.auth.setSession({
-      access_token: token,
-      refresh_token: ''
-    })
-
-    // Get user from token
+    // Get user from the token
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
     
     if (userError || !user) {
+      console.error('User authentication failed:', userError)
       throw new Error('Unauthorized')
     }
+
+    console.log('Authenticated user:', user.id, user.email)
 
     // Get request body
     const { userId, userEmail } = await req.json()
 
     // Validate that the authenticated user matches the request
     if (user.id !== userId) {
+      console.error('User ID mismatch:', { authUserId: user.id, requestUserId: userId })
       throw new Error('User ID mismatch')
     }
+
+    console.log('Creating Stripe session for user:', userId, userEmail)
 
     // Create Stripe checkout session
     const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
@@ -77,6 +84,7 @@ serve(async (req) => {
     }
 
     const session = await stripeResponse.json()
+    console.log('Stripe session created:', session.id)
 
     return new Response(
       JSON.stringify({ sessionId: session.id }),
