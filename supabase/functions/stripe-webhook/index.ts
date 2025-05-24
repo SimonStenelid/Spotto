@@ -1,91 +1,113 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const cryptoProvider = Deno.env.get('DENO_DEPLOYMENT_ID') ? crypto : await import('node:crypto')
-
 serve(async (request) => {
-  const signature = request.headers.get('Stripe-Signature')
-  const body = await request.text()
-  const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
-
-  if (!signature || !webhookSecret) {
-    return new Response('Webhook signature verification failed', { status: 400 })
+  // Handle CORS and method checks
+  if (request.method === 'OPTIONS') {
+    return new Response('ok', { 
+      headers: { 
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+      } 
+    })
   }
 
-  let event
+  if (request.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 })
+  }
+
   try {
-    // Verify webhook signature
+    const signature = request.headers.get('stripe-signature')
+    const body = await request.text()
+    const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
+
+    console.log('Webhook attempt:', {
+      hasSignature: !!signature,
+      hasSecret: !!webhookSecret,
+      bodyLength: body.length,
+      headers: Object.fromEntries(request.headers.entries())
+    })
+
+    if (!signature) {
+      console.error('No Stripe signature found')
+      return new Response('No signature', { status: 400 })
+    }
+
+    if (!webhookSecret) {
+      console.error('No webhook secret configured')
+      return new Response('No webhook secret', { status: 500 })
+    }
+
+    // Simple signature verification (basic approach)
     const elements = signature.split(',')
-    const signatureElements = elements.reduce((acc, element) => {
-      const [key, value] = element.split('=')
-      if (key === 't') {
-        acc.timestamp = parseInt(value, 10)
-      } else if (key.startsWith('v1')) {
-        acc.signatures.push(value)
-      }
-      return acc
-    }, { timestamp: 0, signatures: [] as string[] })
+    const timestamp = elements.find(el => el.startsWith('t='))?.split('=')[1]
+    const sig = elements.find(el => el.startsWith('v1='))?.split('=')[1]
 
-    const timestamp = signatureElements.timestamp
-    const signatures = signatureElements.signatures
+    if (!timestamp || !sig) {
+      console.error('Invalid signature format')
+      return new Response('Invalid signature format', { status: 400 })
+    }
 
-    const payloadForSignature = `${timestamp}.${body}`
-    const expectedSignature = await cryptoProvider.subtle.importKey(
+    // Create the payload for verification
+    const payload = `${timestamp}.${body}`
+    
+    // Use Web Crypto API for HMAC verification
+    const key = await crypto.subtle.importKey(
       'raw',
       new TextEncoder().encode(webhookSecret),
       { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['sign']
-    ).then(key => 
-      cryptoProvider.subtle.sign('HMAC', key, new TextEncoder().encode(payloadForSignature))
-    ).then(signature => 
-      Array.from(new Uint8Array(signature))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')
     )
-
-    const isSignatureValid = signatures.some(signature => signature === expectedSignature)
     
-    if (!isSignatureValid) {
-      console.error('Invalid signature')
+    const signature_bytes = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      new TextEncoder().encode(payload)
+    )
+    
+    const expected_sig = Array.from(new Uint8Array(signature_bytes))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+
+    if (sig !== expected_sig) {
+      console.error('Signature verification failed')
       return new Response('Invalid signature', { status: 400 })
     }
 
-    event = JSON.parse(body)
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err)
-    return new Response('Webhook signature verification failed', { status: 400 })
-  }
+    // Parse the event
+    const event = JSON.parse(body)
+    console.log(`✅ Verified webhook: ${event.id} - ${event.type}`)
 
-  // Create Supabase client with service role key for admin operations
-  const supabaseAdmin = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  )
-
-  try {
+    // Handle checkout.session.completed
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object
       const userId = session.metadata?.userId
       const userEmail = session.metadata?.userEmail || session.customer_email
 
-      console.log('Processing payment completion:', {
+      console.log('Processing payment:', {
         sessionId: session.id,
         userId,
         userEmail,
-        amount: session.amount_total,
-        currency: session.currency
+        amount: session.amount_total
       })
 
       if (!userId && !userEmail) {
-        console.error('No user identifier found in session metadata')
-        return new Response('No user identifier found', { status: 400 })
+        console.error('No user identifier found')
+        return new Response('No user identifier', { status: 400 })
       }
 
-      // First, try to find user by ID, then by email
+      // Create Supabase admin client
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      )
+
+      // Find user ID if we only have email
       let targetUserId = userId
       if (!targetUserId && userEmail) {
-        const { data: profile } = await supabaseAdmin
+        const { data: profile } = await supabase
           .from('profiles')
           .select('id')
           .eq('email', userEmail)
@@ -93,17 +115,17 @@ serve(async (request) => {
         
         if (profile) {
           targetUserId = profile.id
-          console.log('Found user by email:', userEmail, '-> ID:', targetUserId)
+          console.log('Found user by email:', targetUserId)
         }
       }
 
       if (!targetUserId) {
-        console.error('Could not find user with ID or email:', { userId, userEmail })
+        console.error('User not found')
         return new Response('User not found', { status: 400 })
       }
 
-      // Record the payment
-      const { data: paymentData, error: paymentError } = await supabaseAdmin
+      // Insert payment record
+      const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
           user_id: targetUserId,
@@ -111,45 +133,46 @@ serve(async (request) => {
           stripe_payment_intent_id: session.payment_intent,
           amount: session.amount_total,
           currency: session.currency,
-          status: 'succeeded',
-          created_at: new Date().toISOString()
+          status: 'succeeded'
         })
         .select()
         .single()
 
       if (paymentError) {
-        console.error('Error recording payment:', paymentError)
-        return new Response('Error recording payment', { status: 500 })
+        console.error('Payment insert error:', paymentError)
+        return new Response('Payment error', { status: 500 })
       }
 
-      console.log('Payment recorded successfully:', paymentData)
+      console.log('Payment recorded:', payment.id)
 
-      // Update or create membership - use the correct column names
-      const { error: membershipError } = await supabaseAdmin
+      // Update membership
+      const { error: membershipError } = await supabase
         .from('Membership')
         .upsert({
-          id: targetUserId, // The id column references auth.users.id
-          membership: 'paid', // Update the membership type to 'paid'
-          payment_id: paymentData.id, // Link to the payment record
+          id: targetUserId,
+          membership: 'paid',
+          payment_id: payment.id,
           email: userEmail,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'id' // Use 'id' instead of 'user_id'
+          onConflict: 'id'
         })
 
       if (membershipError) {
-        console.error('Error updating membership:', membershipError)
-        return new Response('Error updating membership', { status: 500 })
+        console.error('Membership update error:', membershipError)
+        return new Response('Membership error', { status: 500 })
       }
 
-      console.log('Successfully processed payment and activated membership for user:', targetUserId)
-      return new Response('Payment processed successfully', { status: 200 })
+      console.log('✅ Payment processed successfully for user:', targetUserId)
+      return new Response('Success', { status: 200 })
     }
 
-    // For other event types, just acknowledge receipt
-    return new Response('Event received', { status: 200 })
+    // Acknowledge other events
+    console.log(`Event ${event.type} acknowledged`)
+    return new Response('OK', { status: 200 })
+
   } catch (error) {
-    console.error('Error processing webhook:', error)
-    return new Response('Internal server error', { status: 500 })
+    console.error('Webhook error:', error)
+    return new Response('Internal error', { status: 500 })
   }
 }) 
